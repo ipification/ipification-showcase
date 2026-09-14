@@ -10,31 +10,31 @@
     "dev": "nodemon ./bin/www"
   },
   "dependencies": {
-    "axios": "^1.10.0",
-    "cache-manager": "^7.0.0",
-    "config": "^4.0.0",
+    "axios": "^1.20.0",
+    "cache-manager": "^7.2.9",
+    "config": "^5.0.1",
     "cookie-parser": "^1.4.7",
-    "debug": "^4.4.1",
-    "dotenv": "^16.5.0",
-    "express": "^5.1.0",
+    "debug": "^4.4.3",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
     "express-rate-limit": "^8.7.0",
-    "express-session": "^1.18.1",
-    "firebase-admin": "^12.4.1",
-    "geoip-lite": "^1.4.10",
-    "helmet": "^8.1.0",
+    "express-session": "^1.19.0",
+    "firebase-admin": "^14.4.0",
+    "geoip-lite": "^2.0.3",
+    "helmet": "^8.3.0",
     "html-entities": "^2.6.0",
-    "http-errors": "^2.0.0",
+    "http-errors": "^2.0.1",
     "json-pretty-html": "^1.1.6",
-    "jsonwebtoken": "^9.0.2",
-    "keyv": "^5.3.4",
-    "morgan": "^1.10.0",
+    "jsonwebtoken": "^9.0.3",
+    "keyv": "^5.6.0",
+    "morgan": "^1.12.1",
     "nocache": "^4.0.0",
-    "pug": ">=3.0.3",
-    "socket.io": "^4.8.1",
+    "pug": "^3.0.4",
+    "socket.io": "^4.8.3",
     "stylus": "^0.64.0",
-    "uuid": "^11.1.0"
+    "uuid": "^14.0.2"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.14"
   }
 }
