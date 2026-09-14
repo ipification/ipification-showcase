@@ -13,6 +13,12 @@ require('dotenv').config()
 const { deepMerge } = require('./utils/helpers');
 const { validateConfig } = require('./utils/validateConfig');
 const { getAuthServer } = require('./utils/authServerHelper');
+const { createPlayIntegrityService } = require('./services/playIntegrityService');
+const { createPlayIntegrityAttemptService } = require('./services/playIntegrityAttemptService');
+const { createPlayIntegrityRouter } = require('./routes/playIntegrity');
+const dataStore = require('./lib/data_store');
+const { exchangeCodeAndGetUserInfo } = require('./utils/httpClient');
+const appLogger = require('./utils/logger');
 const { createTs43AuthRateLimiter } = require('./middleware/ts43RateLimit');
 
 // Load locale.json and merge with locale from default.json if exists
@@ -53,8 +59,6 @@ app.use(session({
   saveUninitialized: true,
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(require('stylus').middleware({ src: __dirname + '/public' }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -87,6 +91,36 @@ app.use((req, res, next) => {
 
   next();
 });
+
+if (process.env.PLAY_INTEGRITY_ENABLED === 'true') {
+  const bypassVerification = process.env.PLAY_INTEGRITY_BYPASS_VERIFICATION === 'true';
+  const allowVerificationBypass = bypassVerification && process.env.NODE_ENV !== 'production';
+  if (bypassVerification && !allowVerificationBypass) {
+    appLogger.warn('PLAY_INTEGRITY_BYPASS_VERIFICATION is ignored in production');
+  }
+  const { verify } = createPlayIntegrityService({
+    packageName: process.env.PLAY_INTEGRITY_PACKAGE_NAME,
+    requireLicensedApp: process.env.PLAY_INTEGRITY_REQUIRE_LICENSED_APP === 'true',
+    timeoutMs: 10_000,
+  });
+  const attemptService = createPlayIntegrityAttemptService({
+    dataStore,
+    stateSecret: process.env.PLAY_INTEGRITY_STATE_SECRET,
+    stateIssuer: process.env.PLAY_INTEGRITY_STATE_ISSUER,
+    stateAudience: process.env.PLAY_INTEGRITY_STATE_AUDIENCE,
+  });
+  app.use('/api/play-integrity', createPlayIntegrityRouter({
+    attemptService,
+    verify,
+    exchangeCodeAndGetUserInfo,
+    expectedPackageName: process.env.PLAY_INTEGRITY_PACKAGE_NAME,
+    userFlow: process.env.PLAY_INTEGRITY_USER_FLOW,
+    bypassVerification: allowVerificationBypass,
+  }));
+}
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
 const indexRouter = require('./routes/index');
 const userRouter = require('./routes/user');

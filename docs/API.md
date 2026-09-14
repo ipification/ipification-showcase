@@ -13,6 +13,7 @@ Quick reference for API endpoints and usage patterns.
 - [Mobile Integration](#mobile-integration)
 - [TS43/SIM Integration](#ts43sim-integration)
 - [Configuration API](#configuration-api)
+- [Play Integrity Backend Demo](#play-integrity-backend-demo)
 - [Error Handling](#error-handling)
 - [Advanced Details](#advanced-details)
 
@@ -53,6 +54,12 @@ Quick reference for API endpoints and usage patterns.
 ### I want to get app configuration
 
 → Call `/api/config` to get auth_servers, clients, etc.
+
+### I want to protect an Android backend request with Play Integrity
+
+→ Enable `PLAY_INTEGRITY_ENABLED=true`, then call
+`POST /api/play-integrity/verify`. See [Play Integrity backend demo](PLAY_INTEGRITY.md)
+for Google Cloud setup and Android token lifecycle.
 
 ---
 
@@ -147,6 +154,160 @@ Get application configuration (auth servers, clients, etc.)
 
 ---
 
+## Play Integrity Backend Demo
+
+The IPification demo flow is enabled only when `PLAY_INTEGRITY_ENABLED=true`.
+Create an attempt, verify its fresh Play Integrity token, then exchange the
+IPification authorization code:
+
+```text
+POST /api/play-integrity/attempt
+  -> attempt_id, backend-returned request_hash, expires_at
+POST /api/play-integrity/verify
+  -> signed state, expires_at
+setState(state), then start IPification
+POST /api/play-integrity/token-exchange
+  -> decision: allow
+```
+
+### POST /api/play-integrity/attempt
+
+Creates an immutable authentication attempt. `phone_number` and `server_id` are
+required; `server_id` is mandatory even when a default auth server exists. The
+backend resolves and snapshots the configured `PLAY_INTEGRITY_USER_FLOW` client
+and server, normalizes and hashes the phone number, and returns the hash Android
+must use verbatim.
+
+**Request**:
+
+```json
+{
+  "phone_number": "<e164-phone-number>",
+  "server_id": "<configured-server-id>"
+}
+```
+
+**Response — HTTP 201**:
+
+```json
+{
+  "attempt_id": "<attempt-id>",
+  "request_hash": "<backend-returned-request-hash>",
+  "expires_at": "<iso-8601-expiry>"
+}
+```
+
+The attempt and its transaction expire after 120 seconds. The response never
+contains the stored client secret or normalized phone number.
+
+### POST /api/play-integrity/verify
+
+Verifies an Android Play Integrity Standard API token and checks that it was
+created for the same immutable attempt received by the backend.
+
+**Request**:
+
+```json
+{
+  "attempt_id": "<attempt-id>",
+  "integrity_token": "<fresh-token-from-android>"
+}
+```
+
+Android must request a fresh token for each attempt and send it only once. The
+backend obtains the expected request hash from the stored attempt; the verify
+request does not accept an action, phone number, or client/server configuration.
+
+Android and the backend must use this exact request hash:
+
+```text
+base64url(SHA-256(UTF-8(action + "\n" + canonicalJson(payload))))
+```
+
+`canonicalJson` recursively sorts object keys and preserves array order. The
+server computes the hash from the immutable attempt snapshot, including the
+normalized phone-number hash, attempt ID, client ID, and server ID. Android
+supplies that exact string to the Standard Integrity API.
+
+**Successful response — HTTP 201**:
+
+```json
+{
+  "state": "<signed-state>",
+  "expires_at": "<iso-8601-expiry>"
+}
+```
+
+| Status | `decision` | Meaning |
+| --- | --- | --- |
+| 201 | state returned | Hash and configured integrity policy passed. |
+| 400 | `deny` | Malformed request; Google is not called. |
+| 403 | `deny` | Token decoded but did not meet policy. |
+| 409 | `deny` | Attempt is expired or already used. |
+| 503 | `unavailable` | Google credentials, network, decode, or timeout failure. The attempt is rejected. |
+
+Policy reason codes include `REQUEST_HASH_MISMATCH`, `APP_NOT_RECOGNIZED`,
+`DEVICE_INTEGRITY_NOT_MET`, and (when strict licensing is enabled)
+`APP_NOT_LICENSED`. Dependency reason codes are `GOOGLE_CREDENTIALS_UNAVAILABLE`,
+`GOOGLE_DECODE_FAILED`, and `GOOGLE_DECODE_TIMEOUT`.
+
+The API never returns the submitted Integrity token, service-account
+credential, Google access token, or raw decoded Google response.
+
+### POST /api/play-integrity/token-exchange
+
+After verification, Android must call `setState(state)` before starting
+IPification. Send the returned authorization code and unchanged signed state:
+
+```json
+{
+  "code": "<authorization-code>",
+  "state": "<signed-state>"
+}
+```
+
+Successful response — HTTP 200:
+
+```json
+{ "decision": "allow" }
+```
+
+The backend verifies and atomically consumes the transaction before exchanging
+the code with IPification. A state, attempt, or authorization code cannot be
+reused. A failed upstream exchange returns HTTP 401 with
+`IPIFICATION_EXCHANGE_FAILED`.
+
+### Security and operational limits
+
+- Attempts, transactions, and signed states have a 120-second TTL.
+- The built-in `dataStore` is an in-memory, single-process store; it is not
+  shared between workers or instances and is lost on restart.
+- Production must use Redis or a database with atomic claim/consume operations,
+  and bind the attempt and signed state to an authenticated user session or a
+  short-lived verification session.
+- Never log phone numbers or other PII, request bodies, integrity tokens,
+  authorization codes, signed states, credentials, client secrets, or decoded
+  Google payloads. Logs may contain only request ID, endpoint, decision, reason
+  codes, and duration.
+
+**Server setup**:
+
+1. Link the app's Play Console configuration to its Google Cloud project and enable Play Integrity API.
+2. Give the backend runtime identity permission to decode verdicts for that project.
+3. Set `PLAY_INTEGRITY_PACKAGE_NAME` to the Android `applicationId`.
+4. Provide Application Default Credentials using workload identity or a read-only secret mount; never commit a key file.
+5. Set `PLAY_INTEGRITY_USER_FLOW` to the configured flow to use (for this demo,
+   `pvn_ip`), set `PLAY_INTEGRITY_ENABLED=true`, and restart the server.
+
+For local demo troubleshooting only, `PLAY_INTEGRITY_BYPASS_VERIFICATION=true`
+skips the Google verdict call after the endpoint has claimed a valid attempt and
+received an integrity token. It is ignored when `NODE_ENV=production`.
+
+The full Android provider warm-up, credential guidance, and manual test
+checklist are in [PLAY_INTEGRITY.md](PLAY_INTEGRITY.md).
+
+---
+
 ## Error Handling
 
 **Common Errors**:
@@ -232,7 +393,7 @@ Handles the OAuth2 callback after user authentication.
 | Parameter  | Type   | Required | Description                                                      |
 | ---------- | ------ | -------- | ---------------------------------------------------------------- |
 | `userFlow` | string | Yes      | User flow identifier (e.g., `pvn_ip`, `login_ip`)                |
-| `serverId` | string | No       | Auth server ID (e.g., `stage`, `live`). Defaults to first server |
+| `server_id` | string | No       | Auth server ID (e.g., `stage`, `live`). Defaults to first server |
 
 **Query Parameters**:
 
@@ -263,8 +424,8 @@ GET /auth/callback/login_ip?code=abc123&state=xyz789
 
 **Flow**:
 
-1. Extracts `serverId` from URL path (or defaults to first server)
-2. Resolves auth server URL from `serverId`
+1. Extracts `server_id` from URL path (or defaults to first server)
+2. Resolves auth server URL from `server_id`
 3. Validates authorization code and state
 4. Exchanges authorization code for access token (using same auth server)
 5. Retrieves user information using access token
