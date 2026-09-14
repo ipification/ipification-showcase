@@ -19,6 +19,7 @@ const { createPlayIntegrityRouter } = require('./routes/playIntegrity');
 const dataStore = require('./lib/data_store');
 const { exchangeCodeAndGetUserInfo } = require('./utils/httpClient');
 const appLogger = require('./utils/logger');
+const { createTs43AuthRateLimiter } = require('./middleware/ts43RateLimit');
 
 // Load locale.json and merge with locale from default.json if exists
 const localePath = path.join(__dirname, 'config', 'locale.json');
@@ -130,6 +131,7 @@ const smsRouter = require('./routes/sms');
 app.use('/', indexRouter);
 app.use('/user', userRouter);
 app.use('/auth', authRouter);
+app.use('/ts43/auth', createTs43AuthRateLimiter());
 app.use('/ts43', ts43Router);
 app.use('/sms', smsRouter);
 

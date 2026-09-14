@@ -1,6 +1,6 @@
 {
   "name": "ipification-demo",
-  "version": "1.2.12-SNAPSHOT",
+  "version": "1.2.13-SNAPSHOT",
   "description": "Ipification Demo",
   "private": false,
   "scripts": {
@@ -17,6 +17,7 @@
     "debug": "^4.4.1",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.7.0",
     "express-session": "^1.18.1",
     "firebase-admin": "^12.4.1",
     "geoip-lite": "^1.4.10",

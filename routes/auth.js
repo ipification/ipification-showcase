@@ -11,15 +11,20 @@ const { findClientByUserFlow, findClientByClientId, delay } = require('../utils/
 const { QR_CODE_SUFFIX, ERROR_MESSAGES, HTTP_STATUS, MAX_RETRY_ATTEMPTS, RETRY_DELAY_MS } = require('../utils/constants');
 const { exchangeCodeAndGetUserInfo } = require('../utils/httpClient');
 
+const CALLBACK_ERROR_MESSAGES = Object.freeze({
+  access_denied: 'Authentication was cancelled.',
+  login_required: 'Authentication is required to continue.',
+  operator_not_resolved: 'Your mobile operator could not be resolved.',
+  server_error: 'Authentication is temporarily unavailable.',
+  temporarily_unavailable: 'Authentication is temporarily unavailable.',
+});
+
 router.get('/login', function (req, res) {
   const error_message = req.session.error_message;
-  const error_state = req.session.error_state;
 
   req.session.error_message = null;
-  req.session.error_state = null;
   res.render('login', {
     error_message: htmlEntities.encode(error_message),
-    error_state: error_state,
     node_env: process.env.NODE_ENV
   });
 });
@@ -60,7 +65,9 @@ router.get('/start', function (req, res) {
   // Get auth server (defaults to first server if serverId not provided)
   const authServer = getAuthServer(serverId);
   if (!authServer) {
-    res.status(HTTP_STATUS.BAD_REQUEST).send(serverId ? `Invalid server_id: '${serverId}'` : 'No auth servers configured');
+    res.status(HTTP_STATUS.BAD_REQUEST).json({
+      error: serverId ? 'INVALID_SERVER_ID' : 'NO_AUTH_SERVERS_CONFIGURED',
+    });
     return;
   }
 
@@ -138,9 +145,7 @@ router.get('/callback/:userFlow/:serverId', async function (req, res) {
   const ipBackchannelAuth = req.headers['ip-backchannel-im-auth'] === 'true';
 
   if (req.query.error || req.query.error_description) {
-    const error_message = req.query.error_description || req.query.error;
-    req.session.error_message = error_message;
-    req.session.error_state = req.query?.state || '';
+    req.session.error_message = CALLBACK_ERROR_MESSAGES[req.query.error] || 'Unable to complete authentication.';
     res.redirect(`/auth/login`);
     return;
   }
