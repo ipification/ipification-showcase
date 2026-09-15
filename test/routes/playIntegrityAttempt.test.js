@@ -341,7 +341,10 @@ test('token exchange rejects reuse before a second IPification call', async () =
   await withServer(router, async (post) => {
     const first = await post('/token-exchange', { code: 'input', state: 'signed.state.value' });
     assert.equal(first.status, 200);
-    assert.deepEqual(await first.json(), { decision: 'allow' });
+    assert.deepEqual(await first.json(), {
+      decision: 'allow',
+      user_info: { subject: 'not-returned' },
+    });
 
     const reused = await post('/token-exchange', { code: 'different-input', state: 'signed.state.value' });
     assert.equal(reused.status, 409);
@@ -362,6 +365,28 @@ test('token exchange rejects reuse before a second IPification call', async () =
     },
   ]]);
   assert.deepEqual(completions, [['transaction-id', 'consumed']]);
+});
+
+test('token exchange returns user info from the IPification exchange', async () => {
+  const userInfo = {
+    sub: 'user-123',
+    phone_number: '+84901234567',
+  };
+  const router = createRouter({
+    exchangeCodeAndGetUserInfo: async () => ({
+      tokenInfo: { access_token: 'must-not-be-returned' },
+      userInfo,
+    }),
+  });
+
+  await withServer(router, async (post) => {
+    const response = await post('/token-exchange', { code: 'input', state: 'signed.state.value' });
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), {
+      decision: 'allow',
+      user_info: userInfo,
+    });
+  });
 });
 
 test('token exchange records a failed transaction without exposing the dependency error', async () => {

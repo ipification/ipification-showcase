@@ -129,9 +129,9 @@ function createPlayIntegrityRouter({
 
     try {
       const { tokenUrl, userUrl, params } = exchangeInputs(transaction.attempt, code);
-      await exchangeCodeAndGetUserInfo(tokenUrl, userUrl, params);
+      const { userInfo } = await exchangeCodeAndGetUserInfo(tokenUrl, userUrl, params);
       await completeTransactionSafely(attemptService, transaction.id, 'consumed');
-      respond(res, 200, { decision: 'allow' }, completion, logCompletion, 'allow');
+      respond(res, 200, { decision: 'allow', user_info: userInfo }, completion, logCompletion, 'allow');
     } catch {
       await completeTransactionSafely(attemptService, transaction.id, 'failed');
       respond(res, 401, safeResponse(completion.requestId, 'deny', ['IPIFICATION_EXCHANGE_FAILED']), completion, logCompletion);

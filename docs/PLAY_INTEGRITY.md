@@ -102,9 +102,18 @@ Content-Type: application/json
 ```
 
 The backend verifies and atomically consumes the transaction before exchanging
-the code with IPification. A successful response is
-`{ "decision": "allow" }`. The signed state and transaction are single-use;
-replay or expiry is rejected.
+the code with IPification. A successful response contains the decision and
+the user information returned by IPification:
+
+```json
+{
+  "decision": "allow",
+  "user_info": { "sub": "<user-subject>" }
+}
+```
+
+Token details are not returned. The signed state and transaction are
+single-use; replay or expiry is rejected.
 
 ## Configuration
 

@@ -269,8 +269,17 @@ IPification. Send the returned authorization code and unchanged signed state:
 Successful response — HTTP 200:
 
 ```json
-{ "decision": "allow" }
+{
+  "decision": "allow",
+  "user_info": {
+    "sub": "<user-subject>",
+    "phone_number": "<phone-number>"
+  }
+}
 ```
+
+`user_info` contains the user information returned by IPification. Token
+details are not returned by this endpoint.
 
 The backend verifies and atomically consumes the transaction before exchanging
 the code with IPification. A state, attempt, or authorization code cannot be
