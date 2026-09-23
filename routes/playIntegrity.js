@@ -10,7 +10,6 @@ function createPlayIntegrityRouter({
   expectedPackageName,
   userFlow,
   bypassVerification = false,
-  maxAgeMs = 120_000,
   requestIdFactory = uuidv4,
   logCompletion = defaultLogCompletion,
   logVerificationFailure = defaultLogVerificationFailure,
@@ -80,7 +79,7 @@ function createPlayIntegrityRouter({
     try {
       const verdict = bypassVerification
         ? { decision: 'allow', reasonCodes: [] }
-        : await verify({ integrityToken, expectedRequestHash: attempt.requestHash, expectedPackageName, maxAgeMs });
+        : await verify({ integrityToken, expectedRequestHash: attempt.requestHash, expectedPackageName });
       const reasonCodes = safeReasonCodes(verdict?.reasonCodes);
       if (verdict?.decision !== 'allow') {
         await attemptService.rejectAttempt(attempt.id, reasonCodes[0] || 'POLICY_DENIED');
@@ -233,9 +232,30 @@ function respond(res, status, body, completion, logCompletion, decision = body.d
     endpoint: completion.endpoint,
     decision,
     reasonCodes: decision === 'allow' ? [] : safeReasonCodes(reasonCodes),
+    ...(decision === 'allow' ? {} : { reasonDetails: reasonDetailsForCodes(reasonCodes) }),
     duration: Date.now() - completion.startedAt,
   });
   res.status(status).json(body);
+}
+
+function reasonDetailsForCodes(reasonCodes) {
+  const details = {
+    INVALID_REQUEST: 'Request payload is missing required fields or is malformed',
+    ATTEMPT_UNAVAILABLE: 'Attempt is expired, already claimed, or unavailable',
+    REQUEST_HASH_MISMATCH: 'Decoded request hash does not match the server-stored request hash',
+    PACKAGE_NAME_MISMATCH: 'Decoded package name does not match the configured package name',
+    APP_NOT_RECOGNIZED: 'App recognition verdict is not PLAY_RECOGNIZED',
+    DEVICE_INTEGRITY_NOT_MET: 'Device integrity verdict does not include MEETS_DEVICE_INTEGRITY',
+    APP_NOT_LICENSED: 'App licensing is required but the app is not LICENSED',
+    GOOGLE_CREDENTIALS_UNAVAILABLE: 'Backend Google credentials are unavailable',
+    GOOGLE_DECODE_FAILED: 'Google Play Integrity token decode failed',
+    GOOGLE_DECODE_TIMEOUT: 'Google Play Integrity token decode timed out',
+    INVALID_STATE: 'Signed state is invalid or cannot be verified',
+    TRANSACTION_UNAVAILABLE: 'Transaction is expired, already claimed, or unavailable',
+    IPIFICATION_EXCHANGE_FAILED: 'IPification authorization-code exchange failed',
+    POLICY_DENIED: 'Play Integrity policy denied the request',
+  };
+  return safeReasonCodes(reasonCodes).map((reasonCode) => details[reasonCode] || 'Play Integrity policy rejected the request');
 }
 
 async function rejectAttemptSafely(attemptService, attemptId, reason) {

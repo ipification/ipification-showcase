@@ -74,7 +74,6 @@ function createRouter({ attemptService, verify, exchangeCodeAndGetUserInfo, logC
     expectedPackageName: 'com.example.demo',
     userFlow: 'mobile',
     bypassVerification,
-    maxAgeMs: 120_000,
     requestIdFactory: () => 'request-id',
     logCompletion,
     logVerificationFailure,
@@ -179,7 +178,6 @@ test('verify issues state only after a matching verdict', async () => {
     integrityToken: 'opaque',
     expectedRequestHash: publicAttempt.requestHash,
     expectedPackageName: 'com.example.demo',
-    maxAgeMs: 120_000,
   });
 });
 
@@ -245,6 +243,34 @@ test('verify denies a hash mismatch without issuing state', async () => {
 
   assert.equal(rejectedReason, 'REQUEST_HASH_MISMATCH');
   assert.equal(approved, 0);
+});
+
+test('verify logs a clear reason for every policy reason code', async () => {
+  const events = [];
+  const router = createRouter({
+    logCompletion: (event) => events.push(event),
+    verify: async () => ({
+      decision: 'deny',
+      reasonCodes: ['REQUEST_HASH_MISMATCH', 'DEVICE_INTEGRITY_NOT_MET'],
+    }),
+  });
+
+  await withServer(router, async (post) => {
+    const response = await post('/verify', { attempt_id: publicAttempt.attemptId, integrity_token: 'opaque' });
+    assert.equal(response.status, 403);
+  });
+
+  assert.deepEqual(events[0], {
+    requestId: 'request-id',
+    endpoint: 'verify',
+    decision: 'deny',
+    reasonCodes: ['REQUEST_HASH_MISMATCH', 'DEVICE_INTEGRITY_NOT_MET'],
+    reasonDetails: [
+      'Decoded request hash does not match the server-stored request hash',
+      'Device integrity verdict does not include MEETS_DEVICE_INTEGRITY',
+    ],
+    duration: events[0].duration,
+  });
 });
 
 test('verify rejects an expired or claimed attempt before Google is called', async () => {

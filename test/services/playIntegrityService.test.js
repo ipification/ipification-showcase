@@ -9,7 +9,6 @@ const validInput = {
   integrityToken: 'opaque-integrity-token',
   expectedRequestHash: 'expected-request-hash',
   expectedPackageName: 'com.example.demo',
-  maxAgeMs: 120_000,
 };
 
 const fixedNow = new Date('2026-09-10T10:00:00.000Z');
@@ -73,7 +72,7 @@ test('allows a recognized app with matching hash and device integrity', async ()
   });
 });
 
-test('denies a mismatched package or stale timestamp', async () => {
+test('denies a mismatched package but ignores token timestamp freshness', async () => {
   const { service: mismatchedPackage } = createService({
     decoded: decodedFixture({ requestDetails: {
       requestHash: validInput.expectedRequestHash,
@@ -85,12 +84,13 @@ test('denies a mismatched package or stale timestamp', async () => {
     decoded: decodedFixture({ requestDetails: {
       requestHash: validInput.expectedRequestHash,
       requestPackageName: validInput.expectedPackageName,
-      timestampMillis: String(fixedNow.getTime() - validInput.maxAgeMs - 1),
+      timestampMillis: String(fixedNow.getTime() - 120_001),
     } }),
   });
 
   assert.deepEqual((await mismatchedPackage.verify(validInput)).reasonCodes, ['PACKAGE_NAME_MISMATCH']);
-  assert.deepEqual((await stale.verify(validInput)).reasonCodes, ['REQUEST_TOO_OLD']);
+  assert.deepEqual((await stale.verify(validInput)).reasonCodes, []);
+  assert.equal((await stale.verify(validInput)).decision, 'allow');
 });
 
 test('denies a mismatched request hash before other policy failures', async () => {

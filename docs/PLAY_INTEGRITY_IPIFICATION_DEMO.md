@@ -22,7 +22,7 @@ Google Standard Integrity API has two different artifacts:
 | `StandardIntegrityTokenProvider` | Prepare ahead of time; retain in app memory and reuse to request verdicts. |
 | `integrityToken` | Request fresh for every protected operation; send once to backend for Google decode. |
 
-Google requires the backend to compare the decoded request package name, request hash, and token timestamp against the original request before evaluating app/device verdicts. The request hash binds the integrity token to a specific action rather than merely to a device.
+Google requires the backend to compare the decoded request package name and request hash against the original request before evaluating app/device verdicts. The request hash binds the integrity token to a specific action rather than merely to a device.
 
 References: [Standard API guide](https://developer.android.com/google/play/integrity/standard), [Integrity verdicts](https://developer.android.com/google/play/integrity/verdicts), and [Play Integrity setup](https://developer.android.com/google/play/integrity/setup).
 
@@ -175,7 +175,7 @@ The backend must perform these checks in order:
 1. Atomically claim the attempt: accept only `created` and unexpired attempts, then change it to `verifying`.
 2. Recompute `expectedRequestHash` from the server-side immutable snapshot. Never accept a hash, action, or phone number from the verify request as the expected value.
 3. Decode the integrity token via Google with backend credentials.
-4. Check `requestPackageName`, `requestHash`, and `timestampMillis` against expected server values.
+4. Check `requestPackageName` and `requestHash` against expected server values.
 5. Enforce policy, for example `PLAY_RECOGNIZED`, `MEETS_DEVICE_INTEGRITY`, and optionally `LICENSED`.
 6. On success, atomically create a single-use transaction and return an expiring signed state. On failure, mark the attempt rejected and return no state.
 
@@ -236,14 +236,6 @@ const verifyIntegrityAttempt = async ({ attempt, integrityToken }) => {
   const app = payload?.appIntegrity;
   const device = payload?.deviceIntegrity;
   const account = payload?.accountDetails;
-  const timestamp = Number(request?.timestampMillis);
-  const maxAgeMs = Number(process.env.PLAY_INTEGRITY_MAX_AGE_MS || 120_000);
-
-  const isFresh =
-    Number.isFinite(timestamp) &&
-    timestamp <= Date.now() &&
-    Date.now() - timestamp <= maxAgeMs;
-
   const isExpectedPackage =
     request?.requestPackageName === process.env.PLAY_INTEGRITY_PACKAGE_NAME;
   const isExpectedHash = equal(request?.requestHash, attempt.expectedRequestHash);
@@ -255,7 +247,7 @@ const verifyIntegrityAttempt = async ({ attempt, integrityToken }) => {
   const isLicensed =
     !needsLicensedApp || account?.appLicensingVerdict === "LICENSED";
 
-  if (!isExpectedPackage || !isExpectedHash || !isFresh ||
+  if (!isExpectedPackage || !isExpectedHash ||
       !isRecognizedApp || !meetsDeviceIntegrity || !isLicensed) {
     return { ok: false, reason: "INTEGRITY_POLICY_REJECTED" };
   }
@@ -376,4 +368,3 @@ created -> verifying -> approved -> exchanging -> completed
 - Keep attempt, transaction, and state TTLs short.
 - Use Redis/database atomic operations, not an in-memory `Map`, when the backend has multiple instances.
 - A demo without user/pre-auth session has no user ownership binding. Add it before production.
-
