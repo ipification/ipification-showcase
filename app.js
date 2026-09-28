@@ -18,8 +18,8 @@ const { createPlayIntegrityAttemptService } = require('./services/playIntegrityA
 const { createPlayIntegrityRouter } = require('./routes/playIntegrity');
 const dataStore = require('./lib/data_store');
 const { exchangeCodeAndGetUserInfo } = require('./utils/httpClient');
-const appLogger = require('./utils/logger');
 const { createTs43AuthRateLimiter } = require('./middleware/ts43RateLimit');
+const { isPlayIntegrityVerificationDomain } = require('./utils/playIntegrityDomain');
 
 // Load locale.json and merge with locale from default.json if exists
 const localePath = path.join(__dirname, 'config', 'locale.json');
@@ -93,11 +93,6 @@ app.use((req, res, next) => {
 });
 
 if (process.env.PLAY_INTEGRITY_ENABLED === 'true') {
-  const bypassVerification = process.env.PLAY_INTEGRITY_BYPASS_VERIFICATION === 'true';
-  const allowVerificationBypass = bypassVerification && process.env.NODE_ENV !== 'production';
-  if (bypassVerification && !allowVerificationBypass) {
-    appLogger.warn('PLAY_INTEGRITY_BYPASS_VERIFICATION is ignored in production');
-  }
   const { verify } = createPlayIntegrityService({
     packageName: process.env.PLAY_INTEGRITY_PACKAGE_NAME,
     requireLicensedApp: process.env.PLAY_INTEGRITY_REQUIRE_LICENSED_APP === 'true',
@@ -115,7 +110,10 @@ if (process.env.PLAY_INTEGRITY_ENABLED === 'true') {
     exchangeCodeAndGetUserInfo,
     expectedPackageName: process.env.PLAY_INTEGRITY_PACKAGE_NAME,
     userFlow: process.env.PLAY_INTEGRITY_USER_FLOW,
-    bypassVerification: allowVerificationBypass,
+    verifyRequiredForRequest: (req) => isPlayIntegrityVerificationDomain(
+      req.hostname,
+      config.play_integrity_verify_domains,
+    ),
   }));
 }
 

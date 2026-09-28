@@ -308,9 +308,11 @@ reused. A failed upstream exchange returns HTTP 401 with
 5. Set `PLAY_INTEGRITY_USER_FLOW` to the configured flow to use (for this demo,
    `pvn_ip`), set `PLAY_INTEGRITY_ENABLED=true`, and restart the server.
 
-For local demo troubleshooting only, `PLAY_INTEGRITY_BYPASS_VERIFICATION=true`
-skips the Google verdict call after the endpoint has claimed a valid attempt and
-received an integrity token. It is ignored when `NODE_ENV=production`.
+Verification is controlled by `play_integrity_verify_domains` in
+`config/default.json`. The request hostname must exactly match a configured
+domain to call Google Play Integrity; other domains bypass the Google verdict
+call after the endpoint has claimed a valid attempt and received an integrity
+token. An empty list bypasses verification for all domains.
 
 The full Android provider warm-up, credential guidance, and manual test
 checklist are in [PLAY_INTEGRITY.md](PLAY_INTEGRITY.md).

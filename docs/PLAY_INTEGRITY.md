@@ -126,8 +126,22 @@ PLAY_INTEGRITY_PACKAGE_NAME=com.example.demo
 GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/play-integrity-service-account.json
 PLAY_INTEGRITY_REQUIRE_LICENSED_APP=false
 PLAY_INTEGRITY_USER_FLOW=pvn_ip
-PLAY_INTEGRITY_BYPASS_VERIFICATION=false
 ```
+
+Configure the domains that must use Google verification in
+`config/default.json`:
+
+```json
+{
+  "play_integrity_verify_domains": ["showcase.example.com"]
+}
+```
+
+The request hostname must exactly match one configured domain. Protocol, port,
+path, and other subdomains are not included in the match. Requests from domains
+not in the list bypass the Google verdict call while still requiring and
+consuming a valid attempt and integrity token. An empty list bypasses Google
+verification for all domains.
 
 The Google Cloud project used by the backend must be linked to the matching
 application in Google Play Console. Enable the Play Integrity API in that
@@ -135,11 +149,6 @@ project, and grant the runtime identity permission to call it (for example,
 the least-privilege Play Integrity API user role). The package name in
 `PLAY_INTEGRITY_PACKAGE_NAME`, the Play Console app, and the Android build must
 match exactly.
-
-For local demo troubleshooting only, set `PLAY_INTEGRITY_BYPASS_VERIFICATION=true`.
-The backend still requires and consumes an attempt and integrity token, but skips
-the Google verdict call and issues state. This setting is ignored when
-`NODE_ENV=production`.
 
 For local or secret-mounted deployments, Google Application Default
 Credentials (ADC) may read the service-account JSON from

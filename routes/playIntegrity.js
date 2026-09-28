@@ -10,6 +10,7 @@ function createPlayIntegrityRouter({
   expectedPackageName,
   userFlow,
   bypassVerification = false,
+  verifyRequiredForRequest,
   requestIdFactory = uuidv4,
   logCompletion = defaultLogCompletion,
   logVerificationFailure = defaultLogVerificationFailure,
@@ -77,7 +78,11 @@ function createPlayIntegrityRouter({
     }
 
     try {
-      const verdict = bypassVerification
+      const shouldVerify = typeof verifyRequiredForRequest === 'function'
+        ? verifyRequiredForRequest(req)
+        : !bypassVerification;
+      completion.verificationMode = shouldVerify ? 'verify' : 'bypass';
+      const verdict = !shouldVerify
         ? { decision: 'allow', reasonCodes: [] }
         : await verify({ integrityToken, expectedRequestHash: attempt.requestHash, expectedPackageName });
       const reasonCodes = safeReasonCodes(verdict?.reasonCodes);
@@ -230,6 +235,7 @@ function respond(res, status, body, completion, logCompletion, decision = body.d
   logCompletionSafely(logCompletion, {
     requestId: completion.requestId,
     endpoint: completion.endpoint,
+    ...(completion.verificationMode ? { verification_mode: completion.verificationMode } : {}),
     decision,
     reasonCodes: decision === 'allow' ? [] : safeReasonCodes(reasonCodes),
     ...(decision === 'allow' ? {} : { reasonDetails: reasonDetailsForCodes(reasonCodes) }),

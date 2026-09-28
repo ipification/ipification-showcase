@@ -66,7 +66,7 @@ function createRealAttemptService() {
   });
 }
 
-function createRouter({ attemptService, verify, exchangeCodeAndGetUserInfo, logCompletion, bypassVerification, logVerificationFailure } = {}) {
+function createRouter({ attemptService, verify, exchangeCodeAndGetUserInfo, logCompletion, bypassVerification, verifyRequiredForRequest, logVerificationFailure } = {}) {
   return createPlayIntegrityRouter({
     attemptService: attemptService || createAttemptService(),
     verify: verify || (async () => ({ decision: 'allow', reasonCodes: [] })),
@@ -74,6 +74,7 @@ function createRouter({ attemptService, verify, exchangeCodeAndGetUserInfo, logC
     expectedPackageName: 'com.example.demo',
     userFlow: 'mobile',
     bypassVerification,
+    verifyRequiredForRequest,
     requestIdFactory: () => 'request-id',
     logCompletion,
     logVerificationFailure,
@@ -159,7 +160,9 @@ test('attempt resolves its configured user flow without accepting client_id', as
 
 test('verify issues state only after a matching verdict', async () => {
   let verifyInput;
+  const events = [];
   const router = createRouter({
+    logCompletion: (event) => events.push(event),
     verify: async (input) => {
       verifyInput = input;
       return { decision: 'allow', reasonCodes: [] };
@@ -179,12 +182,15 @@ test('verify issues state only after a matching verdict', async () => {
     expectedRequestHash: publicAttempt.requestHash,
     expectedPackageName: 'com.example.demo',
   });
+  assert.equal(events[0].verification_mode, 'verify');
 });
 
-test('verify bypass issues state without calling Google verification', async () => {
+test('verify bypass issues state without calling Google verification when the request domain is not configured', async () => {
   let verifyCalls = 0;
+  const events = [];
   const router = createRouter({
-    bypassVerification: true,
+    logCompletion: (event) => events.push(event),
+    verifyRequiredForRequest: () => false,
     verify: async () => { verifyCalls += 1; throw new Error('Google must not be called'); },
   });
 
@@ -197,6 +203,7 @@ test('verify bypass issues state without calling Google verification', async () 
   });
 
   assert.equal(verifyCalls, 0);
+  assert.equal(events[0].verification_mode, 'bypass');
 });
 
 test('verify logs the safe upstream error details without the integrity token', async () => {
@@ -263,6 +270,7 @@ test('verify logs a clear reason for every policy reason code', async () => {
   assert.deepEqual(events[0], {
     requestId: 'request-id',
     endpoint: 'verify',
+    verification_mode: 'verify',
     decision: 'deny',
     reasonCodes: ['REQUEST_HASH_MISMATCH', 'DEVICE_INTEGRITY_NOT_MET'],
     reasonDetails: [
