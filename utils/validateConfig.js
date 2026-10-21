@@ -116,9 +116,6 @@ function validateCredentials(config) {
  */
 function validateConfig(config) {
   logger.log('\n=== Validating Configuration ===');
-  if(process.env.NODE_ENV === 'stage') {
-    logger.log('config', config);
-  }
 
   validateRealm(config.realm);
   validateAuthServers(config.auth_servers);

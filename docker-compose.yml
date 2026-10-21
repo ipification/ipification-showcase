@@ -9,4 +9,4 @@ services:
     ports:
       - 3001:3001
     volumes:
-      - ./config/default.json.docker:/usr/app/config/default.json
+      - ./config/default.json:/usr/app/config/default.json

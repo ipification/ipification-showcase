@@ -25,7 +25,7 @@ This guide will help you get the IPification Showcase application up and running
 
 ## Prerequisites Checklist
 
-- [ ] Node.js >= 22.x installed
+- [ ] Node.js >= 24.0.0 installed (24.22.0 is pinned in `.tool-versions` and Docker)
 - [ ] npm installed
 - [ ] IPification account credentials
 
