@@ -74,7 +74,7 @@ Starts OAuth flow and redirects user to IPification.
 **Required**:
 
 - `user_flow`: Which flow to use (`pvn_ip`, `login_ip`, etc.)
-- `state`: Random string for security
+- `state`: Request/result correlation value; the standard web callback does not compare it against session state
 
 **Optional**:
 
@@ -85,7 +85,7 @@ Starts OAuth flow and redirects user to IPification.
 
 ### Handle Callback
 
-**GET** `/auth/callback/:userFlow/:serverId?`
+**GET** `/auth/callback/:userFlow/:serverId`
 
 IPification redirects here after authentication. Your app handles this automatically.
 
@@ -356,6 +356,8 @@ Display the login page with available authentication options.
 
 Initiates the OAuth2/OIDC authentication flow by redirecting to IPification authorization server.
 
+For a step-by-step IP phone-verification walkthrough with implementation references, see [PNV via IP](PNV.md).
+
 **Query Parameters**:
 
 | Parameter   | Type   | Required | Description                                                      |
@@ -363,12 +365,12 @@ Initiates the OAuth2/OIDC authentication flow by redirecting to IPification auth
 | `user_flow` | string | Yes      | User flow identifier (e.g., `pvn_ip`, `login_ip`)                |
 | `server_id` | string | No       | Auth server ID (e.g., `stage`, `live`). Defaults to first server |
 | `phone`     | string | No       | Phone number in E.164 format (e.g., `+1234567890`)               |
-| `state`     | string | Yes      | State parameter for OAuth flow (used for CSRF protection)        |
+| `state`     | string | Yes      | Correlates the authorization request and cached callback result; presence is checked |
 
 **Example Request**:
 
 ```
-GET /auth/start?user_flow=pvn_ip&server_id=stage&phone=+1234567890&state=abc123xyz
+GET /auth/start?user_flow=pvn_ip&server_id=stage&phone=%2B1234567890&state=abc123xyz
 ```
 
 **Response**: HTTP 302 Redirect to IPification authorization server
@@ -377,7 +379,7 @@ GET /auth/start?user_flow=pvn_ip&server_id=stage&phone=+1234567890&state=abc123x
 
 1. Validates `server_id` and resolves to auth server URL (defaults to first server if not provided)
 2. Validates user flow exists in configuration
-3. Validates state parameter
+3. Checks that state is present; otherwise redirects to `/auth/login`
 4. Builds authorization URL with OAuth2 parameters
 5. Redirects user to IPification authorization server
 
@@ -386,16 +388,16 @@ The redirect_uri sent to auth server will be: `/auth/callback/{user_flow}/{serve
 
 **Error Responses**:
 
-| Status Code | Error Message                | Cause                         |
+| Status Code | JSON Error Code              | Cause                         |
 | ----------- | ---------------------------- | ----------------------------- |
-| 400         | `Invalid server_id: 'xyz'`   | Server ID not found in config |
-| 400         | `No auth servers configured` | auth_servers array is empty   |
+| 400         | `INVALID_SERVER_ID`           | Server ID not found in config |
+| 400         | `NO_AUTH_SERVERS_CONFIGURED` | auth_servers array is empty   |
 
 ---
 
 #### OAuth Callback
 
-**GET** `/auth/callback/:userFlow/:serverId?`
+**GET** `/auth/callback/:userFlow/:serverId`
 
 Handles the OAuth2 callback after user authentication.
 
@@ -404,14 +406,14 @@ Handles the OAuth2 callback after user authentication.
 | Parameter  | Type   | Required | Description                                                      |
 | ---------- | ------ | -------- | ---------------------------------------------------------------- |
 | `userFlow` | string | Yes      | User flow identifier (e.g., `pvn_ip`, `login_ip`)                |
-| `server_id` | string | No       | Auth server ID (e.g., `stage`, `live`). Defaults to first server |
+| `serverId` | string | Yes      | Auth server ID in the callback path (e.g., `stage`, `live`) |
 
 **Query Parameters**:
 
 | Parameter           | Type   | Required | Description                           |
 | ------------------- | ------ | -------- | ------------------------------------- |
 | `code`              | string | Yes      | Authorization code from IPification   |
-| `state`             | string | Yes      | State parameter (must match original) |
+| `state`             | string | No       | Callback/result correlation key; a UUID is generated if absent; not checked against session state |
 | `error`             | string | No       | Error code if authentication failed   |
 | `error_description` | string | No       | Error description                     |
 
@@ -421,23 +423,21 @@ Handles the OAuth2 callback after user authentication.
 GET /auth/callback/pvn_ip/stage?code=abc123&state=xyz789
 ```
 
-```
-GET /auth/callback/login_ip?code=abc123&state=xyz789
-(Uses default/first server when serverId not in URL)
-```
+Both path segments are required; `/auth/callback/login_ip` does not match the registered route.
 
 **Response**:
 
 - Success: HTTP 302 Redirect to `/auth/complete?state=xyz789`
 - QR Code Flow: HTTP 302 Redirect to `/auth/qrcode/complete` or `/auth/qrcode/error`
 - Backchannel Flow: HTTP 200 (empty body)
-- Error: HTTP 302 Redirect to `/auth/login` with error message
+- Provider-reported `error` or `error_description`: HTTP 302 Redirect to `/auth/login` with a fixed session error message
+- Token exchange/userinfo failure: HTTP 400 with the caught error message
 
 **Flow**:
 
-1. Extracts `server_id` from URL path (or defaults to first server)
-2. Resolves auth server URL from `server_id`
-3. Validates authorization code and state
+1. Extracts `serverId` from the required URL path
+2. Resolves the auth server and configured client
+3. Reads code and state; no local comparison to an original session state is performed
 4. Exchanges authorization code for access token (using same auth server)
 5. Retrieves user information using access token
 6. Stores user information in data store
@@ -475,7 +475,7 @@ Completes the authentication flow and retrieves stored user information.
 GET /auth/complete?state=xyz789
 ```
 
-**Response**: HTTP 302 Redirect to `/user/info`
+**Response**: HTTP 302 Redirect to `/user/info` when a result is found, or `/` after all cache reads miss
 
 **Flow**:
 
@@ -483,6 +483,8 @@ GET /auth/complete?state=xyz789
 2. Polls data store (up to 5 attempts with 1-second delay)
 3. Sets session variables (`isAuthenticated`, `userData`)
 4. Redirects to user info page
+
+The session flag marks completion of the demo flow. It is not gated on `phone_number_verified`; see [verification results and current limitations](PNV.md#verification-results-and-current-limitations).
 
 ---
 

@@ -79,6 +79,7 @@ When testing from a mobile device, replace `localhost` with your computer's reac
 - **[Quick Start](docs/QUICKSTART.md)** - Setup guide and common issues
 - **[API Reference](docs/API.md)** - Complete endpoint documentation
 - **[Architecture](docs/ARCHITECTURE.md)** - System design and components
+- **[PNV via IP](docs/PNV.md)** - Phone input, authorization redirect, callback, code exchange, and verification-result handling
 - **[Sample Config Reference](docs/CONFIG_DEFAULT_JSON_SAMPLE.md)** - Application configuration fields
 - **[Play Integrity backend demo](docs/PLAY_INTEGRITY.md)** - Backend verification setup, request hashing, and Android checklist
 - **[Documentation Index](docs/INDEX.md)** - Documentation overview

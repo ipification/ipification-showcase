@@ -31,6 +31,10 @@ Welcome! Find what you need quickly.
 **...understand authentication flows**  
 → [Architecture](ARCHITECTURE.md) - How authentication works
 
+**...follow phone verification via IP end to end**
+
+→ [PNV via IP](PNV.md) - Phone input, redirects, code exchange, userinfo, and current verification limitations
+
 **...integrate with the API**  
 → [API Reference](API.md) - Endpoint documentation
 
@@ -55,6 +59,7 @@ Welcome! Find what you need quickly.
 
 ### Feature Guides
 
+- **[PNV via IP](PNV.md)** - End-to-end IP verification flow with code references and examples
 - **[TS43 SIM Verification](TS43.md)** - Use SIM-based auth
 - **[SMS Verification Flow](SMS.md)** - Use SMS OTP for phone verification
 - **[Multi-Server Setup](CONFIG_DEFAULT_JSON_SAMPLE.md#auth_servers-fields)** - Configure multiple auth servers
@@ -75,6 +80,7 @@ docs/
 ├── QUICKSTART.md      ← Start here for setup
 ├── CONFIG_DEFAULT_JSON_SAMPLE.md  ← Config reference
 ├── LOCALE.md          ← UI text customization
+├── PNV.md             ← IP phone verification flow and code walkthrough
 ├── TS43.md            ← SIM verification guide
 ├── SMS.md             ← SMS OTP verification guide
 ├── API.md             ← API endpoint reference

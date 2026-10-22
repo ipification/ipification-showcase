@@ -73,6 +73,8 @@ Flow:
 
 ### Standard Flow (Mobile/Desktop Web)
 
+For the IP phone-verification walkthrough, request examples, and source map, see [PNV via IP](PNV.md).
+
 ```
 User clicks button
   ↓
@@ -124,7 +126,7 @@ See [CONFIG_DEFAULT_JSON_SAMPLE.md](CONFIG_DEFAULT_JSON_SAMPLE.md) for details.
 ## Security
 
 - ✅ OAuth2 authorization code flow
-- ✅ State parameter (CSRF protection)
+- State parameter for callback/result correlation; the standard web flow does not compare it against a saved session value (see [PNV limitations](PNV.md#verification-results-and-current-limitations))
 - ✅ Session management
 - ✅ HTTPS recommended for production
 - ✅ Helmet.js security headers
@@ -290,7 +292,7 @@ Request → Session Middleware → Session Store → Request Object
 ### State Management
 
 ```
-Auth Start → Generate State → Store in Session → Include in Auth URL
+Browser → Generate State → /auth/start → Include in Auth URL
                                                           │
                                                           └─> IPification
                                                           │
@@ -318,7 +320,7 @@ Key Format:                    Value:
 
 1. **Helmet.js**: HTTP security headers
 2. **Session Management**: Secure session cookies
-3. **State Parameter**: CSRF protection
+3. **State Parameter**: Callback/result correlation; no standard web session-state comparison
 4. **Input Validation**: Parameter validation
 5. **Secret Keys**: Environment-based secrets
 
@@ -329,9 +331,9 @@ Key Format:                    Value:
 │                    Security Measures                     │
 ├─────────────────────────────────────────────────────────┤
 │                                                           │
-│  1. State Parameter (CSRF Protection)                    │
+│  1. State Parameter (Result Correlation)                   │
 │     - Generated on client                                │
-│     - Validated on callback                              │
+│     - Not compared against browser-session state          │
 │                                                           │
 │  2. OAuth2 Authorization Code Flow                       │
 │     - Short-lived authorization codes                    │

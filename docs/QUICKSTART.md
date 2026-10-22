@@ -96,12 +96,14 @@ If you configured multiple auth servers in `config/default.json`, you can switch
 ### Phone Number Verification (PNV)
 
 1. Go to **PNV** tab
-2. Enter phone number (optional for some flows)
+2. Enter the phone number to verify
 3. Click desired button:
    - **IP**: Carrier-based verification
    - **IP+**: Enhanced verification with mobile ID
    - **IM**: Instant messaging verification
    - **SIM**: SIM card verification
+
+For the IP flow's redirects, callback, code exchange, and result/session behavior, see [PNV via IP](PNV.md).
 
 ### Quick Access Login
 
