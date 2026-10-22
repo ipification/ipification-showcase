@@ -12,14 +12,9 @@ require('dotenv').config()
 
 const { deepMerge } = require('./utils/helpers');
 const { validateConfig } = require('./utils/validateConfig');
-const { getAuthServer } = require('./utils/authServerHelper');
-const { createPlayIntegrityService } = require('./services/playIntegrityService');
-const { createPlayIntegrityAttemptService } = require('./services/playIntegrityAttemptService');
-const { createPlayIntegrityRouter } = require('./routes/playIntegrity');
-const dataStore = require('./lib/data_store');
-const { exchangeCodeAndGetUserInfo } = require('./utils/httpClient');
 const { createTs43AuthRateLimiter } = require('./middleware/ts43RateLimit');
-const { isPlayIntegrityVerificationDomain } = require('./utils/playIntegrityDomain');
+const { createAppLocalsMiddleware } = require('./middleware/appLocals');
+const { setupPlayIntegrity } = require('./bootstrap/playIntegrity');
 
 // Load locale.json and merge with locale from default.json if exists
 const localePath = path.join(__dirname, 'config', 'locale.json');
@@ -63,59 +58,11 @@ app.use(cookieParser());
 app.use(require('stylus').middleware({ src: __dirname + '/public' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use((req, res, next) => {
+// Shared request context must be available to every route below.
+app.use(createAppLocalsMiddleware({ config, locale }));
 
-  const { client_id, client_secret, clients } = config;
-  const customClients = clients.map(client => ({
-    ...client,
-    client_id: client.client_id || client_id,
-    client_secret: client.client_secret || client_secret,
-  }));
-
-  res.locals = {
-    ...res.locals,
-    title: 'IPification Showcase',
-    ...config,
-    clients: customClients,
-    locale: locale,
-    baseUrl: `${req.protocol}://${req.headers.host}`,
-    get_flow_title: (user_flow, default_title) => {
-      const client = config.clients.find(item => item.user_flow === user_flow);
-      return client ? client.title : default_title;
-    },
-    getAuthServer: (serverId) => getAuthServer(config.auth_servers, serverId),
-    app_env: process.env.NODE_ENV || 'development'
-  }
-
-  // res.setHeader('Server', 'IPification');
-
-  next();
-});
-
-if (process.env.PLAY_INTEGRITY_ENABLED === 'true') {
-  const { verify } = createPlayIntegrityService({
-    packageName: process.env.PLAY_INTEGRITY_PACKAGE_NAME,
-    requireLicensedApp: process.env.PLAY_INTEGRITY_REQUIRE_LICENSED_APP === 'true',
-    timeoutMs: 10_000,
-  });
-  const attemptService = createPlayIntegrityAttemptService({
-    dataStore,
-    stateSecret: process.env.PLAY_INTEGRITY_STATE_SECRET,
-    stateIssuer: process.env.PLAY_INTEGRITY_STATE_ISSUER,
-    stateAudience: process.env.PLAY_INTEGRITY_STATE_AUDIENCE,
-  });
-  app.use('/api/play-integrity', createPlayIntegrityRouter({
-    attemptService,
-    verify,
-    exchangeCodeAndGetUserInfo,
-    expectedPackageName: process.env.PLAY_INTEGRITY_PACKAGE_NAME,
-    userFlow: process.env.PLAY_INTEGRITY_USER_FLOW,
-    verifyRequiredForRequest: (req) => isPlayIntegrityVerificationDomain(
-      req.hostname,
-      config.play_integrity_verify_domains,
-    ),
-  }));
-}
+// Keep the feature's 16kb JSON parser and safe errors ahead of the general parsers.
+setupPlayIntegrity(app, { config });
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

@@ -352,18 +352,44 @@ Key Format:                    Value:
 
 ## Module Structure
 
+### Application Setup
+
+`app.js` remains the application assembly point: it validates configuration, configures shared middleware and views, and explicitly registers the route prefixes.
+
+| Module | Responsibility |
+| --- | --- |
+| `middleware/appLocals.js` | Create request locals with inherited client credentials, locale, base URL, and server/flow lookup helpers |
+| `bootstrap/playIntegrity.js` | Initialize and mount Play Integrity only when `PLAY_INTEGRITY_ENABLED=true`, with the configured verification and attempt services |
+
+Request locals run before the feature and general routes. Play Integrity is mounted before the general body parsers so its own 16 KB JSON parser and safe payload error responses take precedence. The TS43 auth rate limiter remains immediately before the TS43 router, and the application error handler remains last.
+
 ### Route Modules
 
 #### `routes/auth.js`
 
-- **Purpose**: Main authentication flow handling
+- **Purpose**: Register authentication endpoints; delegate HTTP handling to the web and API modules below.
 - **Key Functions**:
   - `GET /auth/login`: Render login page
   - `GET /auth/start`: Initiate OAuth flow
-  - `GET /auth/callback/:userFlow`: Handle OAuth callback
+  - `GET /auth/callback/:userFlow/:serverId`: Handle OAuth callback
   - `GET /auth/complete`: Complete authentication
+  - `GET /auth/qrcode/complete`: Render QR success page
+  - `GET /auth/qrcode/error`: Render QR error page
   - `POST /auth/mobile/login`: Mobile login endpoint
   - `POST /auth/s2s/signin`: Server-to-server sign-in
+
+#### Authentication handlers and services
+
+| Module | Responsibility |
+| --- | --- |
+| `routes/auth/webHandlers.js` | Login/start/callback/completion handlers, page rendering, session updates, and QR socket notifications |
+| `routes/auth/apiHandlers.js` | Mobile login and S2S sign-in HTTP responses |
+| `services/authService.js` | Build authorization URLs and exchange authorization codes through `utils/httpClient.js`; no Express or cache access |
+| `services/authResultStore.js` | Save formatted results and raw userinfo, read S2S userinfo, and poll for completion results using the existing memory cache |
+
+The callback exchanges the provider code and fetches userinfo before saving the formatted response under `state` and raw userinfo under `${state}-user-info`. After both writes complete, a backchannel request returns an empty 200 response. Otherwise, QR callbacks notify the desktop through Socket.IO and render the mobile result through a redirect; ordinary web callbacks redirect to `/auth/complete`. The desktop also uses `/auth/complete` to adopt the stored result into its browser session and continue to `/user/info`.
+
+Completion polls the result cache up to five times, waiting one second after each miss, including the final miss. Reads retain the cached entries. Mobile login exchanges the code directly and returns userinfo without using this completion cache.
 
 #### `routes/user.js`
 
@@ -373,11 +399,29 @@ Key Format:                    Value:
 
 #### `routes/ts43.js`
 
-- **Purpose**: TS43 protocol implementation
+- **Purpose**: Register the TS43 endpoints and delegate to `routes/ts43/handlers.js`.
 - **Key Functions**:
   - `POST /ts43/auth`: Initiate TS43 authentication
   - `POST /ts43/token`: Exchange VP token
   - `POST /ts43/log`: Logging endpoint
+
+#### `routes/sms.js`
+
+- **Purpose**: Register the SMS endpoints and delegate to `routes/sms/handlers.js`.
+- **Key Functions**:
+  - `POST /sms/auth`: Initiate SMS authentication
+  - `POST /sms/token`: Submit the SMS code and exchange the CIBA request for userinfo
+  - `POST /sms/log`: Logging endpoint
+
+#### TS43 and SMS handlers and services
+
+| Module | Responsibility |
+| --- | --- |
+| `routes/ts43/handlers.js`, `routes/sms/handlers.js` | Resolve server/client configuration, handle requests and responses, format display data, and update browser sessions |
+| `services/ts43Service.js` | Start CIBA authentication, fetch DCQL data and build the digital request, then submit the VP callback and exchange for token/userinfo |
+| `services/smsService.js` | Start CIBA SMS authentication, then submit the SMS callback and exchange for token/userinfo |
+
+Both services expose `startAuthentication` and `exchangeToken` and operate without Express request/response objects. Provider callbacks are best-effort: a callback error is logged, then the token exchange still runs. The handlers retain the demo's existing session behavior: token/userinfo errors also populate an authenticated session with formatted error data. This extraction preserves those behaviors and the endpoint-specific error bodies; it does not introduce a shared CIBA abstraction.
 
 ### Library Modules
 
