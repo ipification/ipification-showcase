@@ -1,5 +1,8 @@
 # API Documentation
 
+> A separate Next.js application is being migrated in `showcase-next/`. See the [migration guide](NEXTJS_MIGRATION.md) for its runtime configuration, commands, compatibility limits and verification. The existing Express application remains available.
+
+
 Quick reference for API endpoints and usage patterns.
 
 ## Table of Contents

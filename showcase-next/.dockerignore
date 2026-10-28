@@ -1,0 +1,16 @@
+node_modules
+.next
+.git
+.env
+.env.*
+!.env.example
+config/default.json
+config/local.json
+config/local-*.json
+config/stage.json
+config/production.json
+tests
+e2e
+test-results
+playwright-report
+*.tsbuildinfo

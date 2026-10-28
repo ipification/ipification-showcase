@@ -1,5 +1,8 @@
 # Play Integrity backend demo
 
+> A separate Next.js application is being migrated in `showcase-next/`. See the [migration guide](NEXTJS_MIGRATION.md) for its runtime configuration, commands, compatibility limits and verification. The existing Express application remains available.
+
+
 This demo verifies an Android Play Integrity token on the server at
 `POST /api/play-integrity/verify`. The endpoint is disabled unless
 `PLAY_INTEGRITY_ENABLED=true`.

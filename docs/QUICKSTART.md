@@ -1,5 +1,8 @@
 # Quick Start Guide
 
+> A separate Next.js application is being migrated in `showcase-next/`. See the [migration guide](NEXTJS_MIGRATION.md) for its runtime configuration, commands, compatibility limits and verification. The existing Express application remains available.
+
+
 This guide will help you get the IPification Showcase application up and running quickly.
 
 ## Table of Contents

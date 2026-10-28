@@ -1,5 +1,8 @@
 # Phone Number Verification (PNV) via IP
 
+> A separate Next.js application is being migrated in `showcase-next/`. See the [migration guide](NEXTJS_MIGRATION.md) for its runtime configuration, commands, compatibility limits and verification. The existing Express application remains available.
+
+
 This guide follows the implemented IP verification flow: enter a phone number, redirect the browser to IPification, receive an authorization code, fetch userinfo, and display the result in a browser session.
 
 The UI calls this feature **PNV**, while its configured flow identifier is **`pvn_ip`**. Keep that identifier when configuring clients or calling the routes.

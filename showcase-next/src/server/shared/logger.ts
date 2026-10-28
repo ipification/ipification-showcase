@@ -1,1 +1,12 @@
-export function logRequest(fields:{requestId?:string;method?:string;path?:string;status?:number;duration?:number;endpoint?:string;decision?:string;reasonCodes?:string[]}){console.info(JSON.stringify(fields));}
+export function logRequest(fields: {
+  requestId?: string;
+  method?: string;
+  path?: string;
+  status?: number;
+  duration?: number;
+  endpoint?: string;
+  decision?: string;
+  reasonCodes?: string[];
+}) {
+  console.info(JSON.stringify(fields));
+}

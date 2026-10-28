@@ -1,4 +1,20 @@
-import axios from 'axios';
-import qs from 'qs';
-export async function postForm(url:string,data:Record<string,unknown>){return (await axios.post(url,qs.stringify(data),{headers:{'Content-Type':'application/x-www-form-urlencoded'}})).data;}
-export async function exchangeCodeAndGetUserInfo(tokenUrl:string,userUrl:string,params:Record<string,unknown>){const tokenInfo=await postForm(tokenUrl,params);const userInfo=await postForm(userUrl,{access_token:tokenInfo.access_token});return {tokenInfo,userInfo};}
+import axios from "axios";
+import qs from "qs";
+export async function postForm(url: string, data: Record<string, unknown>) {
+  return (
+    await axios.post(url, qs.stringify(data), {
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    })
+  ).data;
+}
+export async function exchangeCodeAndGetUserInfo(
+  tokenUrl: string,
+  userUrl: string,
+  params: Record<string, unknown>,
+) {
+  const tokenInfo = await postForm(tokenUrl, params);
+  const userInfo = await postForm(userUrl, {
+    access_token: tokenInfo.access_token,
+  });
+  return { tokenInfo, userInfo };
+}

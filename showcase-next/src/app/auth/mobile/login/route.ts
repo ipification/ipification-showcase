@@ -1,1 +1,1 @@
-export {mobileLogin as POST} from '@/server/auth/mobile';
+export { mobileLogin as POST } from "@/server/auth/mobile";

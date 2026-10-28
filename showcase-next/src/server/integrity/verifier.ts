@@ -1,13 +1,13 @@
-import axios from 'axios';
-import {GoogleAuth} from 'google-auth-library';
+import axios from "axios";
+import { GoogleAuth } from "google-auth-library";
 
-const PLAY_INTEGRITY_SCOPE = 'https://www.googleapis.com/auth/playintegrity';
+const PLAY_INTEGRITY_SCOPE = "https://www.googleapis.com/auth/playintegrity";
 
 class PlayIntegrityUnavailableError extends Error {
-  reasonCode:string;
-  constructor(reasonCode:string, cause:unknown) {
+  reasonCode: string;
+  constructor(reasonCode: string, cause: unknown) {
     super(reasonCode);
-    this.name = 'PlayIntegrityUnavailableError';
+    this.name = "PlayIntegrityUnavailableError";
     this.reasonCode = reasonCode;
     this.cause = cause;
   }
@@ -19,8 +19,12 @@ function createPlayIntegrityService({
   authClient = new GoogleAuth({ scopes: [PLAY_INTEGRITY_SCOPE] }),
   httpClient = axios,
   timeoutMs,
-}:any) {
-  async function verify({ integrityToken, expectedRequestHash, expectedPackageName }:any) {
+}: any) {
+  async function verify({
+    integrityToken,
+    expectedRequestHash,
+    expectedPackageName,
+  }: any) {
     const accessToken = await getAccessToken(authClient);
     const decoded = await decodeIntegrityToken({
       httpClient,
@@ -41,18 +45,28 @@ function createPlayIntegrityService({
   return { verify };
 }
 
-async function getAccessToken(authClient:any) {
+async function getAccessToken(authClient: any) {
   try {
     const credential = await authClient.getAccessToken();
-    const token = typeof credential === 'string' ? credential : credential?.token;
-    if (!token) throw new Error('access token unavailable');
+    const token =
+      typeof credential === "string" ? credential : credential?.token;
+    if (!token) throw new Error("access token unavailable");
     return token;
-  } catch (error:any) {
-    throw new PlayIntegrityUnavailableError('GOOGLE_CREDENTIALS_UNAVAILABLE', error);
+  } catch (error: any) {
+    throw new PlayIntegrityUnavailableError(
+      "GOOGLE_CREDENTIALS_UNAVAILABLE",
+      error,
+    );
   }
 }
 
-async function decodeIntegrityToken({ httpClient, packageName, integrityToken, accessToken, timeoutMs }:any) {
+async function decodeIntegrityToken({
+  httpClient,
+  packageName,
+  integrityToken,
+  accessToken,
+  timeoutMs,
+}: any) {
   try {
     const response = await httpClient.post(
       `https://playintegrity.googleapis.com/v1/${packageName}:decodeIntegrityToken`,
@@ -63,10 +77,10 @@ async function decodeIntegrityToken({ httpClient, packageName, integrityToken, a
       },
     );
     return response.data;
-  } catch (error:any) {
-    const reasonCode = ['ECONNABORTED', 'ETIMEDOUT'].includes(error?.code)
-      ? 'GOOGLE_DECODE_TIMEOUT'
-      : 'GOOGLE_DECODE_FAILED';
+  } catch (error: any) {
+    const reasonCode = ["ECONNABORTED", "ETIMEDOUT"].includes(error?.code)
+      ? "GOOGLE_DECODE_TIMEOUT"
+      : "GOOGLE_DECODE_FAILED";
     throw new PlayIntegrityUnavailableError(reasonCode, error);
   }
 }
@@ -76,30 +90,36 @@ function evaluateVerdict({
   expectedRequestHash,
   expectedPackageName,
   requireLicensedApp,
-}:any) {
+}: any) {
   const tokenPayload = decoded?.tokenPayloadExternal;
   const requestDetails = tokenPayload?.requestDetails;
   const requestHash = requestDetails?.requestHash;
   const requestPackageName = requestDetails?.requestPackageName;
-  const appRecognition = tokenPayload?.appIntegrity?.appRecognitionVerdict ?? null;
-  const deviceIntegrity = Array.isArray(tokenPayload?.deviceIntegrity?.deviceRecognitionVerdict)
+  const appRecognition =
+    tokenPayload?.appIntegrity?.appRecognitionVerdict ?? null;
+  const deviceIntegrity = Array.isArray(
+    tokenPayload?.deviceIntegrity?.deviceRecognitionVerdict,
+  )
     ? tokenPayload.deviceIntegrity.deviceRecognitionVerdict
     : [];
-  const appLicensing = tokenPayload?.accountDetails?.appLicensingVerdict ?? null;
+  const appLicensing =
+    tokenPayload?.accountDetails?.appLicensingVerdict ?? null;
   const requestHashMatched = requestHash === expectedRequestHash;
   const packageNameMatched = requestPackageName === expectedPackageName;
   const reasonCodes = [];
 
-  if (!requestHashMatched) reasonCodes.push('REQUEST_HASH_MISMATCH');
-  if (!packageNameMatched) reasonCodes.push('PACKAGE_NAME_MISMATCH');
-  if (appRecognition !== 'PLAY_RECOGNIZED') reasonCodes.push('APP_NOT_RECOGNIZED');
-  if (!deviceIntegrity.includes('MEETS_DEVICE_INTEGRITY')) {
-    reasonCodes.push('DEVICE_INTEGRITY_NOT_MET');
+  if (!requestHashMatched) reasonCodes.push("REQUEST_HASH_MISMATCH");
+  if (!packageNameMatched) reasonCodes.push("PACKAGE_NAME_MISMATCH");
+  if (appRecognition !== "PLAY_RECOGNIZED")
+    reasonCodes.push("APP_NOT_RECOGNIZED");
+  if (!deviceIntegrity.includes("MEETS_DEVICE_INTEGRITY")) {
+    reasonCodes.push("DEVICE_INTEGRITY_NOT_MET");
   }
-  if (requireLicensedApp && appLicensing !== 'LICENSED') reasonCodes.push('APP_NOT_LICENSED');
+  if (requireLicensedApp && appLicensing !== "LICENSED")
+    reasonCodes.push("APP_NOT_LICENSED");
 
   return {
-    decision: reasonCodes.length === 0 ? 'allow' : 'deny',
+    decision: reasonCodes.length === 0 ? "allow" : "deny",
     reasonCodes,
     requestHashMatched,
     verdict: {
@@ -110,4 +130,4 @@ function evaluateVerdict({
   };
 }
 
-export {createPlayIntegrityService,PlayIntegrityUnavailableError};
+export { createPlayIntegrityService, PlayIntegrityUnavailableError };

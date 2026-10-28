@@ -1,1 +1,1 @@
-export {diagnostics as POST} from '@/server/ciba/handlers';
+export { diagnostics as POST } from "@/server/ciba/handlers";

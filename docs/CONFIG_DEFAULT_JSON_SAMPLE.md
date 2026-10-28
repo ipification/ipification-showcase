@@ -1,5 +1,8 @@
 # default.json.sample configuration
 
+> A separate Next.js application is being migrated in `showcase-next/`. See the [migration guide](NEXTJS_MIGRATION.md) for its runtime configuration, commands, compatibility limits and verification. The existing Express application remains available.
+
+
 This document describes every field in `config/default.json.sample` and how to use it.
 
 ## Table of Contents
