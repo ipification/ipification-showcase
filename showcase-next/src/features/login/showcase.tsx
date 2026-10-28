@@ -1,7 +1,13 @@
 "use client";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUpRight, ShieldCheck, Smartphone } from "lucide-react";
+import {
+  ArrowUpRight,
+  ShieldCheck,
+  Smartphone,
+  LogIn,
+  Fingerprint,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -28,6 +34,7 @@ import { usePreferences } from "./use-preferences";
 import { SmsDialog } from "@/features/sms/sms-dialog";
 import type { SmsInput } from "@/features/sms/use-sms-flow";
 import { useTs43Flow } from "@/features/ts43/use-ts43-flow";
+const tabIcons = { pnv: ShieldCheck, login: LogIn, identity: Fingerprint };
 function logoStyle(value?: string): React.CSSProperties {
   const entries = (value || "max-width:100%").split(";").flatMap((part) => {
     const colon = part.indexOf(":");
@@ -205,14 +212,18 @@ export function Showcase({ config }: { config: PublicShowcaseConfig }) {
               }}
             >
               <TabsList
-                className="grid w-full"
+                className="showcase-tabs grid w-full"
                 style={{ gridTemplateColumns: `repeat(${tabs.length},1fr)` }}
               >
-                {tabs.map((tab) => (
-                  <TabsTrigger key={tab} value={tab}>
-                    {config.locale.tabs[tab]}
-                  </TabsTrigger>
-                ))}
+                {tabs.map((tab) => {
+                  const Icon = tabIcons[tab];
+                  return (
+                    <TabsTrigger key={tab} value={tab}>
+                      <Icon aria-hidden="true" />
+                      <span>{config.locale.tabs[tab]}</span>
+                    </TabsTrigger>
+                  );
+                })}
               </TabsList>
             </Tabs>
             <LoginError />

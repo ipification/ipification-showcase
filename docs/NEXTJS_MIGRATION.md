@@ -158,3 +158,7 @@ The callback logs one `auth_callback_failed` JSON event containing the reference
 Backchannel failures remain HTTP 400 and now return safe JSON `{ error, reference }`; successful callbacks/backchannels and session completion are unchanged. Existing login error-query handling is unchanged. QR failure screens apply to the device opening the callback; an already-open desktop QR dialog still waits for successful completion.
 
 Verification: production build, lint/typecheck, 14 unit/HTTP tests (including existing unit tests), and all 14 Chromium scenarios passed. The new contract fixture covers five provider failure classes, backchannel failure, redaction and successful callback/session completion using disposable Redis and a local provider. No real-provider code was replayed. Use `E2E_PORT=3003 npm run test:e2e` to test while a developer server is using port 3002.
+
+### Showcase tab presentation
+
+PNV, Login and Identity use a scoped segmented navigation style with decorative icons, 46px minimum target height, an elevated white selected tab and primary-color emphasis. Focus remains visible, reduced-motion preferences disable transitions, and decorative icons are hidden below 360px to preserve label space. Tab filtering, accessible labels, hash navigation and stored selection are unchanged. Existing navigation/storage tests and desktop/mobile visual checks passed (3 Chromium scenarios), along with production build, lint and typecheck.

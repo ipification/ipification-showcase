@@ -63,3 +63,56 @@ a {
 .iti input {
   width: 100%;
 }
+
+/* Keep the showcase navigation distinct from generic dialog/form tabs. */
+.showcase-tabs[data-slot="tabs-list"] {
+  height: auto;
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: var(--muted);
+}
+.showcase-tabs [data-slot="tabs-trigger"] {
+  min-width: 0;
+  min-height: 46px;
+  height: auto;
+  gap: 7px;
+  padding: 10px 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: none;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+.showcase-tabs [data-slot="tabs-trigger"]:hover {
+  color: var(--foreground);
+  background: var(--background);
+}
+.showcase-tabs [data-slot="tabs-trigger"][data-state="active"] {
+  color: var(--primary);
+  background: var(--card);
+  border-color: var(--border);
+  box-shadow:
+    0 2px 4px rgb(23 40 59 / 6%),
+    0 1px 2px rgb(23 40 59 / 4%);
+}
+.showcase-tabs [data-slot="tabs-trigger"]:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+@media (max-width: 360px) {
+  .showcase-tabs [data-slot="tabs-trigger"] svg {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .showcase-tabs [data-slot="tabs-trigger"] {
+    transition: none;
+  }
+}
