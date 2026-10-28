@@ -1,1 +1,12 @@
-export default function Login(){return <main className="mx-auto max-w-xl p-8"><h1 className="text-3xl font-bold">IPification Showcase</h1><p>Mobile identity, made simple.</p></main>;}
+import {headers} from 'next/headers';
+import {getConfig} from '@/server/config/load';
+import {toPublicShowcaseConfig} from '@/server/config/public';
+import {resolveRequestIdentity} from '@/server/http/context';
+import {Showcase} from '@/features/login/showcase';
+export const dynamic='force-dynamic';
+export default async function Login(){
+ let config;try{const h=await headers();const identity=resolveRequestIdentity(new Request('http://localhost/auth/login',{headers:h}),{origin:process.env.APP_ORIGIN,trustProxyHops:Number(process.env.TRUST_PROXY_HOPS||0)});config=toPublicShowcaseConfig(getConfig(),identity.origin);}
+ catch{}
+ if(!config)return <main className="mx-auto max-w-lg p-10"><h1 className="text-2xl font-semibold">Showcase is not ready</h1><p className="mt-4">Check runtime configuration and service readiness, then retry.</p></main>;
+ return <Showcase config={config}/>;
+}

@@ -1,0 +1,50 @@
+{
+  "app": {
+    "name": "IPification features showcase"
+  },
+  "tabs": {
+    "pnv": "PNV",
+    "login": "Login",
+    "identity": "Identity"
+  },
+  "sections": {
+    "pnv": {
+      "title": "Phone Number Verification",
+      "description": "Verify phone number through IP or IM auth."
+    },
+    "login": {
+      "title": "Quick Access",
+      "description": "Login through IP or IM auth with phone number sharing."
+    },
+    "identity": {
+      "title": "Mobile ID & Know Your Customer",
+      "description": "Identify user with anonymous identity (mobile_id) or obtain user info with KYC."
+    }
+  },
+  "buttons": {
+    "ip": "IP",
+    "ip_plus": "IP+",
+    "im": "IM",
+    "sim": "SIM",
+    "ip_via_app": "IP via App",
+    "anonymous_identity": "Anonymous Identity",
+    "kyc": "KYC",
+    "sms": "SMS"
+  },
+  "footer": {
+    "viettel_legal": "Please be kindly aware that by operating to initiate and/or access user accounts, you have agreed on entire content set out in the Privacy terms and Conditions of the Service; and Terms of Use by",
+    "viettel": "Viettel",
+    "privacy_policy": "Privacy Policy",
+    "about": "About",
+    "help": "Help"
+  },
+  "modals": {
+    "about_title": "About this demo",
+    "server_label": "server",
+    "state_label": "state",
+    "developer_link": "Developer.ipification",
+    "phone_required": "Please enter phone number",
+    "phone_invalid": "Your phone is invalid"
+  }
+}
+

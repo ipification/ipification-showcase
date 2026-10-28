@@ -3,7 +3,8 @@ node_modules/
 .env*
 !.env.example
 config/default.json
-config/local*.json
+config/local.json
+config/local-*.json
 config/stage.json
 config/production.json
 *.tsbuildinfo
