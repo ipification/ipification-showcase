@@ -12,6 +12,7 @@ import { saveResult, waitForResult } from "@/server/store/auth-results";
 import { notifyAuthComplete } from "@/server/realtime/notifier";
 import { createSession, readSession } from "@/server/session/store";
 import { sessionId, setSessionCookie } from "@/server/session/cookies";
+import { callbackFailure } from "./failure";
 const errors: Record<string, string> = {
   access_denied: "Authentication was cancelled.",
   login_required: "Authentication is required to continue.",
@@ -118,10 +119,7 @@ export async function callback(
     }
     return legacyRedirect(url);
   } catch (error) {
-    return text(
-      error instanceof Error ? error.message : "Authentication failed",
-      400,
-    );
+    return callbackFailure(request, error);
   }
 }
 export async function complete(request: Request) {

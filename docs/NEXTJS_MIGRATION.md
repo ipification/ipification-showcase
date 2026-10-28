@@ -148,3 +148,13 @@ Still pending: actual provider IP/IP+/IM and SMS flows, Android TS43/WebOTP supp
 4. Roll back the complete route/socket owner to Express if needed. New sessions are not valid in Express. Do not delete legacy source or Redis data as part of rollback.
 
 No production traffic switch, push or legacy removal is performed by this implementation.
+
+### Callback error screens
+
+Browser callback failures now redirect to `/auth/error` instead of returning the raw Axios message. The page explains the problem, gives recovery instructions, and includes an expandable diagnostic section plus a support reference. `invalid_client`/`unauthorized_client` indicate client authentication failure; `invalid_grant` indicates a rejected code (possibly expiry/reuse or client/redirect mismatch). An unqualified token 401 remains `TOKEN_REJECTED`: it does not prove a bad secret. Userinfo failures and unreachable/5xx providers have separate messages.
+
+The callback logs one `auth_callback_failed` JSON event containing the reference, classification, step, upstream HTTP status, and an allowlisted OAuth error code. It does not log Axios config, provider response descriptions, codes, credentials or tokens. Browser redirects include only these safe diagnostic fields. Unexpected query values are ignored by the rendered diagnostic section. Do not add raw provider descriptions to this page or URL.
+
+Backchannel failures remain HTTP 400 and now return safe JSON `{ error, reference }`; successful callbacks/backchannels and session completion are unchanged. Existing login error-query handling is unchanged. QR failure screens apply to the device opening the callback; an already-open desktop QR dialog still waits for successful completion.
+
+Verification: production build, lint/typecheck, 14 unit/HTTP tests (including existing unit tests), and all 14 Chromium scenarios passed. The new contract fixture covers five provider failure classes, backchannel failure, redaction and successful callback/session completion using disposable Redis and a local provider. No real-provider code was replayed. Use `E2E_PORT=3003 npm run test:e2e` to test while a developer server is using port 3002.

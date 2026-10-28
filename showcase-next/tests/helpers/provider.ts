@@ -11,6 +11,8 @@ export async function startProvider() {
       phone_number_verified: "true",
     } as Record<string, unknown>,
     failAt: "",
+    failStatus: 503,
+    failBody: { error: "provider-unavailable" } as Record<string, unknown>,
   };
   const server = createServer(async (req, res) => {
     let raw = "";
@@ -31,8 +33,8 @@ export async function startProvider() {
     calls.push({ operation, body, path });
     res.setHeader("Content-Type", "application/json");
     if (behavior.failAt === operation) {
-      res.writeHead(503);
-      res.end(JSON.stringify({ error: "provider-unavailable" }));
+      res.writeHead(behavior.failStatus);
+      res.end(JSON.stringify(behavior.failBody));
       return;
     }
     res.end(
