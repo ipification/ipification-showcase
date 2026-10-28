@@ -1,0 +1,78 @@
+{
+  "config_version": "1.0.0",
+  "app_config": {
+    "min_supported_version": "2.1.0",
+    "latest_version": "2.1.14",
+    "force_update": false,
+    "update_message": "A new version is available. Please update to continue.",
+    "maintenance_mode": false,
+    "maintenance_message": "App is under maintenance. Please try again later."
+  },
+
+  "default_environment": "sandbox",
+  "branding": {
+    "app_name": "IPification Demo",
+    "show_logo": false,
+    "logo_url": "https://cdn.ipification.com/logos/main.png",
+    "primary_color": "#1976D2",
+    "secondary_color": "#424242"
+  },
+  "main_screen": {
+    "locale": {
+      "title": "IPification\nfeatures\nshowcase",
+      "footer": {
+        "privacy_policy": "Privacy Policy",
+        "privacy_policy_url": "https://www.ipification.com/legal"
+      }
+    }
+  },
+  "pnv_screen": {
+    "locale": {
+      "title": "Phone Number Verification",
+      "description": "Please enter your phone number to continue",
+      "country_code_label": "Code",
+      "phone_number_label": "Phone Number",
+      "footer": {
+        "privacy_policy": "Privacy Policy",
+        "privacy_policy_url": "https://www.ipification.com/legal"
+      },
+      "errors": {
+        "phone_required": "Phone Number cannot be empty",
+        "phone_invalid": "Invalid phone number",
+        "country_code_required": "Country Code cannot be empty"
+      }
+    }
+  },
+  "ussd_screen": {
+    "locale": {
+      "title": "USSD Verification",
+      "description": "Verify your phone number using USSD",
+      "phone_number_label": "Phone Number",
+      "ussd_code_label": "USSD Code",
+      "verify_button": "Verify",
+      "footer": {
+        "privacy_policy": "Privacy Policy",
+        "privacy_policy_url": "https://www.ipification.com/legal"
+      },
+      "errors": {
+        "phone_required": "Phone Number cannot be empty",
+        "permission_required": "CALL_PHONE permission is required"
+      }
+    },
+    "config": {
+      "enabled": true,
+      "ussd_code": "*123#",
+      "backend_url": "https://ussd-backend.ipification.com",
+      "timeout_ms": 30000
+    }
+  },
+  "global_locale": {
+    "app_name": "IPification features showcase",
+    "common": {
+      "ok": "OK",
+      "cancel": "Cancel",
+      "back": "Back",
+      "info_title": "Configuration Info"
+    }
+  }
+}
