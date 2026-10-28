@@ -1,14 +1,14 @@
 import { resolveContext, findServer } from "@/server/http/context";
 import { readBody } from "@/server/http/body";
-import { json, unavailable } from "@/server/http/response";
+import { json, requestFailure } from "@/server/http/response";
 import { exchangeAuthorizationCode } from "./provider";
 export async function mobileLogin(request: Request) {
   let c, body;
   try {
     c = resolveContext(request);
     body = await readBody(request);
-  } catch {
-    return unavailable();
+  } catch (error) {
+    return requestFailure(error);
   }
   const server = findServer(c, body.server_id);
   if (!server)

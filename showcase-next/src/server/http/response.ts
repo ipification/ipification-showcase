@@ -1,3 +1,4 @@
+import { BodyParseError } from "./body";
 export const privateHeaders = { "Cache-Control": "private, no-store" };
 export function json(body: unknown, status = 200, headers: HeadersInit = {}) {
   return Response.json(body, {
@@ -28,4 +29,11 @@ export function legacyRedirect(location: string) {
 }
 export function unavailable() {
   return json({ error: "SERVICE_UNAVAILABLE" }, 503);
+}
+
+// The legacy app's global error middleware maps parser failures to HTTP 500.
+export function requestFailure(error: unknown) {
+  return error instanceof BodyParseError
+    ? json({ error: "INVALID_REQUEST" }, 500)
+    : unavailable();
 }

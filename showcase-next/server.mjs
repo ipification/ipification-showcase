@@ -28,6 +28,13 @@ const server = createServer((req, res) => {
         }),
       );
   });
+  // Next derives Request.url from forwarded headers before Route Handlers run.
+  // Remove untrusted values at the raw HTTP boundary, not only in context.ts.
+  if (!(Number(process.env.TRUST_PROXY_HOPS || 0) > 0)) {
+    for (const name of Object.keys(req.headers))
+      if (name.startsWith("x-forwarded-") || name === "forwarded")
+        delete req.headers[name];
+  }
   req.headers["x-showcase-peer-ip"] = req.socket.remoteAddress || "127.0.0.1";
   req.headers["x-showcase-realtime-ready"] = sockets?.ready()
     ? "true"

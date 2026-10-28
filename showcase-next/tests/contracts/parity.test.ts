@@ -97,6 +97,33 @@ test("all 21 business paths retain legacy status and non-UI payload contracts", 
         );
       }
     }
+    // Express parses request bodies before every business handler.
+    for (const route of [
+      "/auth/s2s/signin",
+      "/auth/mobile/login",
+      "/sms/auth",
+      "/sms/token",
+      "/ts43/auth",
+      "/ts43/token",
+      "/sms/log",
+      "/ts43/log",
+    ]) {
+      for (const body of [
+        "{",
+        JSON.stringify({ oversized: "x".repeat(102400) }),
+      ]) {
+        const options = {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body,
+        };
+        const [old, next] = await Promise.all([
+          fetch(oldUrl + route, options),
+          fetch(app.url + route, options),
+        ]);
+        expect(next.status, `${route}: ${body.length} bytes`).toBe(old.status);
+      }
+    }
   } finally {
     await app.stop();
     await stop(legacy);

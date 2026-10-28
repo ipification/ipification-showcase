@@ -121,6 +121,25 @@ npm run test:e2e
 
 Redis integration tests launch their own disposable local `redis-server`; never point them at a deployed store. Browser tests use fake local providers and a temporary configuration directory; they do not read private configuration. TS43 browser credentials and WebOTP are stubbed where needed; this is not real-device evidence.
 
+### Local acceptance evidence (2026-10-28)
+
+The implementation is on branch `migration/nextjs`, based on `0db9ad1`, in `/private/tmp/ipification-showcase-nextjs`. Checked with Node 24.22.0:
+
+- Legacy suite: 109 passed.
+- Next unit/HTTP contracts: 18 passed across 13 files. The parity fixture exercises all 21 existing method/path contracts, plus malformed/oversize JSON on eight general POST endpoints. This is fixture coverage, not exhaustive provider/input equivalence.
+- Redis/process integration: 8 passed; the optional Docker test was run separately and passed (9 total). This includes callbacks across production processes, session/result reads after app restart, cross-process Integrity claim/exchange races, Redis outage, fixed TTL storage, Socket.IO polling/WebSocket room delivery, and shared rate counters.
+- Chromium: 13 passed, including two-browser QR, SMS retries/cancellation, WebOTP cancellation, TS43 credential stubs, storage failures and mobile layout.
+- ESLint, TypeScript, production build and final Docker image build passed. Docker smoke verified non-root execution, no baked private JSON, and runtime configuration changes after container recreation.
+
+Regression fixes from the final review pass:
+
+- Untrusted forwarded headers are removed before Next creates its request URL; `TRUST_PROXY_HOPS=0` now ignores a spoofed protocol as well as forwarded hostname/IP. Actual HTTP tests cover trust off/on, including a forged internal peer-IP header.
+- General malformed/oversize request bodies retain legacy HTTP 500 (the Express error middleware maps parser errors to 500). The new response is safe JSON rather than a framework error page. Integrity keeps its separate HTTP 400 safe-error contract.
+
+The independent reviewer stopped before issuing a complete report because its usage limit was reached. Its confirmed proxy finding was reproduced and fixed with RED/GREEN tests; the author checked malformed-input behavior and added the process-boundary tests above. A complete independent branch review remains outstanding. Do not interpret local test success as staging or production acceptance.
+
+Still pending: actual provider IP/IP+/IM and SMS flows, Android TS43/WebOTP support, Google Play Integrity verification, exact staging proxy topology and public callbacks, multi-replica load-balancer affinity/reconnect behavior, and a rehearsed cutover/rollback. The implementation does not switch traffic or remove Express.
+
 ### Cutover and rollback
 
 1. Verify all current flows against the exact staging public origin, provider client/callback registrations and supported devices. Include real IP/IP+/IM, QR on two devices, S2S/mobile APIs, SMS, TS43 and both Integrity verify/bypass hosts.

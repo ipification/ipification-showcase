@@ -4,7 +4,12 @@ import {
   type RequestContext,
 } from "@/server/http/context";
 import { readBody } from "@/server/http/body";
-import { json, text, unavailable } from "@/server/http/response";
+import {
+  json,
+  text,
+  unavailable,
+  requestFailure,
+} from "@/server/http/response";
 import { createSession } from "@/server/session/store";
 import { sessionId, setSessionCookie } from "@/server/session/cookies";
 import { checkTs43Limit } from "@/server/store/rate-limit";
@@ -25,8 +30,8 @@ async function handle(
       headers = limit.headers;
       if (!limit.allowed) return json({ error: "RATE_LIMITED" }, 429, headers);
     }
-  } catch {
-    return unavailable();
+  } catch (error) {
+    return requestFailure(error);
   }
   const server = findServer(c, body.server_id);
   if (!server)
@@ -122,7 +127,7 @@ export async function diagnostics(request: Request) {
   try {
     await readBody(request);
     return text("OK");
-  } catch {
-    return json({ error: "INVALID_REQUEST" }, 400);
+  } catch (error) {
+    return requestFailure(error);
   }
 }

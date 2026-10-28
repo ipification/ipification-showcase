@@ -39,6 +39,13 @@ test("opaque sessions rotate, stay server-side and atomically consume errors", a
     expect(
       await redis.client.ttl("session-test:session:" + next),
     ).toBeGreaterThan(3590);
+    await redis.client.pExpire("session-test:session:" + next, 100);
+    await readSession(next);
+    expect(
+      await redis.client.pTTL("session-test:session:" + next),
+    ).toBeLessThanOrEqual(100);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(await readSession(next)).toBeNull();
     await deleteSession(next);
     expect(await readSession(next)).toBeNull();
     expect(await readSession("invalid")).toBeNull();

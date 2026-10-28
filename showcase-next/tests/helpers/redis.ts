@@ -38,7 +38,7 @@ export async function startRedis() {
     url,
     client,
     stop: async () => {
-      client.destroy();
+      if (client.isOpen) client.destroy();
       await stop(child);
     },
   };

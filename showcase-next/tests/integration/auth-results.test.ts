@@ -27,6 +27,14 @@ test("results are shared, retain one hour TTL and S2S reads do not consume", asy
     expect(await redis.client.pTTL("result-test:result:s")).toBeGreaterThan(
       3590000,
     );
+    await redis.client.pExpire("result-test:result:s", 100);
+    await redis.client.pExpire("result-test:result:s-user-info", 100);
+    await waitForResult("s");
+    expect(await redis.client.pTTL("result-test:result:s")).toBeLessThanOrEqual(
+      100,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(await getUserInfo("s")).toBeUndefined();
   } finally {
     await closeRedis();
     await redis.stop();

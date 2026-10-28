@@ -1,3 +1,8 @@
+export class BodyParseError extends Error {
+  constructor() {
+    super("INVALID_REQUEST");
+  }
+}
 export async function readBody(
   request: Request,
   limitBytes = 102400,
@@ -19,7 +24,7 @@ export async function readBody(
       size += value.length;
       if (size > limitBytes) {
         await reader.cancel();
-        throw new Error("INVALID_REQUEST");
+        throw new BodyParseError();
       }
       parts.push(value);
     }
@@ -42,7 +47,7 @@ export async function readBody(
     }
     return result;
   } catch {
-    throw new Error("INVALID_REQUEST");
+    throw new BodyParseError();
   } finally {
     reader.releaseLock();
   }
