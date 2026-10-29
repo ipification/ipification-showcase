@@ -1,8 +1,4 @@
-import {
-  resolveContext,
-  findServer,
-  type RequestContext,
-} from "@/server/http/context";
+import { resolveContext } from "@/server/http/context";
 import { readBody } from "@/server/http/body";
 import {
   json,
@@ -10,113 +6,86 @@ import {
   unavailable,
   requestFailure,
 } from "@/server/http/response";
-import { createSession } from "@/server/session/store";
 import { sessionId, setSessionCookie } from "@/server/session/cookies";
 import { checkTs43Limit } from "@/server/store/rate-limit";
-import * as provider from "./provider";
+import { ApplicationError } from "@/server/shared/errors";
+import { cibaService, failureData } from "./service";
+import { decodeCiba } from "./input";
+import type { Protocol } from "./provider";
 async function handle(
   request: Request,
-  protocol: provider.Protocol,
+  protocol: Protocol,
   operation: "auth" | "token",
 ) {
-  let c: RequestContext,
-    body: Record<string, any>,
+  let context,
+    input,
     headers: Record<string, string> = {};
   try {
-    c = resolveContext(request);
-    body = await readBody(request);
+    context = resolveContext(request);
+    input = decodeCiba(await readBody(request));
     if (protocol === "ts43" && operation === "auth") {
-      const limit = await checkTs43Limit(c, body);
+      const limit = await checkTs43Limit(context, input);
       headers = limit.headers;
       if (!limit.allowed) return json({ error: "RATE_LIMITED" }, 429, headers);
     }
   } catch (error) {
     return requestFailure(error);
   }
-  const server = findServer(c, body.server_id);
-  if (!server)
-    return json(
-      {
-        error: body.server_id
-          ? `Invalid server_id: '${body.server_id}'`
-          : "No auth servers configured",
-      },
-      400,
-    );
-  const client = c.config.clients.find((x) => x.client_id === body.client_id);
-  if (!client)
-    return operation === "auth"
-      ? text("Client not found", 401)
-      : json({ error: "Client not found" }, 401);
-  const input = {
-    authServerUrl: server.url,
-    realm: c.config.realm,
-    clientId: body.client_id,
-    clientSecret: client.client_secret,
-  };
-  async function display(data: any, status: number) {
-    const id = await createSession(
-      {
-        isAuthenticated: true,
-        userData: {
-          userInfo: data,
-          client_id: body.client_id,
-          client_title: protocol === "ts43" ? "SIM" : client!.title || "SMS",
-          state: body.nonce,
-        },
-      },
+  try {
+    if (operation === "auth") {
+      const outcome = await cibaService.start(context, protocol, input);
+      return outcome.kind === "failure"
+        ? json(
+            {
+              auth_server: outcome.server,
+              success: false,
+              ...failureData(outcome.failure),
+            },
+            outcome.failure.status,
+            headers,
+          )
+        : json(
+            {
+              auth_server: outcome.server,
+              auth_req_id: outcome.authReqId,
+              nonce: outcome.nonce,
+              ...("digitalRequest" in outcome
+                ? { digital_request: outcome.digitalRequest }
+                : {}),
+            },
+            200,
+            headers,
+          );
+    }
+    const outcome = await cibaService.token(
+      context,
+      protocol,
+      input,
       sessionId(request),
     );
     return setSessionCookie(
-      json(status === 200 ? { auth_server: server, ...data } : data, status),
-      id,
-      c!.origin,
+      outcome.kind === "failure"
+        ? json(failureData(outcome.failure), outcome.failure.status)
+        : json({ auth_server: outcome.server, ...outcome.data }),
+      outcome.sessionId,
+      context.origin,
     );
-  }
-  try {
-    if (operation === "auth") {
-      const result = await provider.startAuthentication(protocol, {
-        ...input,
-        scope: client.scope,
-        reqScope: body.scope,
-        loginHint: body.login_hint,
-        carrierHint: body.carrier_hint,
-        operation: body.operation,
-      });
-      return json(
-        {
-          auth_server: server,
-          auth_req_id: result.authReqId,
-          nonce: result.nonce,
-          ...("digitalRequest" in result
-            ? { digital_request: result.digitalRequest }
-            : {}),
-        },
-        200,
-        headers,
-      );
+  } catch (error) {
+    if (error instanceof ApplicationError) {
+      if (error.code === "SERVER_NOT_FOUND")
+        return json(
+          {
+            error: error.input
+              ? `Invalid server_id: '${error.input}'`
+              : "No auth servers configured",
+          },
+          400,
+        );
+      return operation === "auth"
+        ? text("Client not found", 401)
+        : json({ error: "Client not found" }, 401);
     }
-    const user = await provider.exchangeToken(protocol, {
-      ...input,
-      authReqId: body.auth_req_id,
-      vpToken: body.vp_token,
-      smsCode: body.code,
-    });
-    return await display(user, 200);
-  } catch (error: any) {
-    const status = error.response?.status || 500;
-    const result = {
-      ...(operation === "auth" ? { auth_server: server, success: false } : {}),
-      error: error.message || "Authentication failed",
-      status,
-      ...(error.response?.data ? { data: error.response.data } : {}),
-    };
-    if (operation === "auth") return json(result, status, headers);
-    try {
-      return await display(result, status);
-    } catch {
-      return unavailable();
-    }
+    return unavailable();
   }
 }
 export const smsAuth = (r: Request) => handle(r, "sms", "auth");

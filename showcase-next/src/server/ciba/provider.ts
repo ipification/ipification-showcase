@@ -2,6 +2,37 @@ import { randomUUID } from "node:crypto";
 import axios from "axios";
 import { postForm } from "@/server/shared/http-client";
 export type Protocol = "sms" | "ts43";
+interface Credentials {
+  authServerUrl: string;
+  realm: string;
+  clientId: string;
+  clientSecret: string;
+}
+interface StartInput extends Credentials {
+  reqScope?: unknown;
+  scope?: string;
+  loginHint?: unknown;
+  carrierHint?: unknown;
+  operation?: unknown;
+}
+interface TokenInput extends Credentials {
+  authReqId?: unknown;
+  vpToken?: unknown;
+  smsCode?: unknown;
+}
+export interface CibaStartResult {
+  authReqId: unknown;
+  nonce: string;
+  digitalRequest?: {
+    protocol: string;
+    data: {
+      response_type: string;
+      response_mode: string;
+      nonce: string;
+      dcql_query: { credentials: unknown[] };
+    };
+  };
+}
 export async function startAuthentication(
   protocol: Protocol,
   {
@@ -14,11 +45,11 @@ export async function startAuthentication(
     loginHint,
     carrierHint,
     operation,
-  }: any,
-) {
+  }: StartInput,
+): Promise<CibaStartResult> {
   const root = `${authServerUrl}/realms/${realm}/protocol/openid-connect`,
     nonce = randomUUID();
-  const form: any = {
+  const form: Record<string, unknown> = {
     client_id: clientId,
     client_secret: clientSecret,
     scope: reqScope || scope || "openid",
@@ -37,7 +68,7 @@ export async function startAuthentication(
   if (!auth.auth_req_id)
     throw new Error("No authReqId received from auth response");
   if (protocol === "sms") return { authReqId: auth.auth_req_id, nonce };
-  const { data } = await axios.post(
+  const { data } = await axios.post<unknown>(
     root + "/ext/bc/ts43/dcql",
     {
       operation:
@@ -75,7 +106,7 @@ export async function exchangeToken(
     authReqId,
     vpToken,
     smsCode,
-  }: any,
+  }: TokenInput,
 ) {
   const root = `${authServerUrl}/realms/${realm}/protocol/openid-connect`;
   try {

@@ -6,7 +6,7 @@ const positive = (name: string, fallback: number) => {
 };
 export async function checkTs43Limit(
   context: { clientIp: string },
-  body: Record<string, any>,
+  body: Record<string, unknown>,
 ) {
   const windowMs = positive("TS43_RATE_LIMIT_WINDOW_MS", 60000);
   const identity = createHash("sha256")
