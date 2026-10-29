@@ -34,7 +34,7 @@ export interface DisplayResult {
   userInfo: UserInfo;
   client_id: string;
   client_title: string;
-  state: string;
+  state: unknown;
 }
 export interface SessionData {
   isAuthenticated: boolean;

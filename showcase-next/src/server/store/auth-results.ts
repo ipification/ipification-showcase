@@ -1,8 +1,8 @@
 import { getRedis, key } from "./redis";
 import type { DisplayResult, UserInfo } from "@/shared/contracts";
 type Store = {
-  get: (key: string) => Promise<any>;
-  set: (key: string, value: any) => Promise<unknown>;
+  get: (key: string) => Promise<DisplayResult | UserInfo | null>;
+  set: (key: string, value: DisplayResult | UserInfo) => Promise<unknown>;
 };
 export function createAuthResultStore(
   store: Store,
@@ -10,27 +10,27 @@ export function createAuthResultStore(
     new Promise((r) => setTimeout(r, ms)),
 ) {
   return {
-    async saveResult(state: string, result: DisplayResult, raw: UserInfo) {
-      await store.set(state, result);
+    async saveResult(state: unknown, result: DisplayResult, raw: UserInfo) {
+      await store.set(String(state), result);
       await store.set(`${state}-user-info`, raw);
     },
-    async waitForResult(state?: string): Promise<DisplayResult | undefined> {
+    async waitForResult(state?: unknown): Promise<DisplayResult | undefined> {
       for (let i = 0; i <= 4; i++) {
-        const value = await store.get(state || "");
-        if (value) return value;
+        const value = await store.get(String(state || ""));
+        if (value) return value as DisplayResult;
         await delay(1000);
       }
       return undefined;
     },
-    async getUserInfo(state?: string): Promise<UserInfo | undefined> {
-      return (await store.get(`${state}-user-info`)) || undefined;
+    async getUserInfo(state?: unknown): Promise<UserInfo | undefined> {
+      return ((await store.get(`${state}-user-info`)) as UserInfo) || undefined;
     },
   };
 }
 const store = createAuthResultStore({
   async get(id) {
     const value = await (await getRedis()).get(key("result:" + id));
-    return value ? JSON.parse(value) : null;
+    return value ? (JSON.parse(value) as DisplayResult | UserInfo) : null;
   },
   async set(id, value) {
     await (

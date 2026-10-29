@@ -1,8 +1,11 @@
 import axios from "axios";
 import qs from "qs";
-export async function postForm(url: string, data: Record<string, unknown>) {
+export async function postForm<T = Record<string, unknown>>(
+  url: string,
+  data: Record<string, unknown>,
+) {
   return (
-    await axios.post(url, qs.stringify(data), {
+    await axios.post<T>(url, qs.stringify(data), {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
     })
   ).data;

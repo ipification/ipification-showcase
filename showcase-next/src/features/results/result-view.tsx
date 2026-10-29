@@ -17,7 +17,7 @@ export function ResultView({ result }: { result: DisplayResult }) {
           </pre>
           <dl className="mt-6 space-y-2 break-all text-sm text-muted-foreground">
             <div>Client ID: {result.client_id}</div>
-            <div>State: {result.state}</div>
+            <div>State: {result.state as React.ReactNode}</div>
           </dl>
         </CardContent>
       </Card>
