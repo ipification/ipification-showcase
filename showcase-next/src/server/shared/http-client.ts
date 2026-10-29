@@ -1,3 +1,4 @@
+import { providerCall } from "./errors";
 import axios from "axios";
 import qs from "qs";
 export async function postForm<T = Record<string, unknown>>(
@@ -15,9 +16,13 @@ export async function exchangeCodeAndGetUserInfo(
   userUrl: string,
   params: Record<string, unknown>,
 ) {
-  const tokenInfo = await postForm(tokenUrl, params);
-  const userInfo = await postForm(userUrl, {
-    access_token: tokenInfo.access_token,
-  });
+  const tokenInfo = await providerCall("token", () =>
+    postForm(tokenUrl, params),
+  );
+  const userInfo = await providerCall("userinfo", () =>
+    postForm(userUrl, {
+      access_token: tokenInfo.access_token,
+    }),
+  );
   return { tokenInfo, userInfo };
 }

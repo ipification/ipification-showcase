@@ -1,3 +1,4 @@
+import { ProviderError } from "@/server/shared/errors";
 import axios from "axios";
 import { randomUUID } from "node:crypto";
 import {
@@ -10,11 +11,27 @@ export function describeAuthFailure(error: unknown) {
   let stage: "token" | "userinfo" | "application" = "application";
   let status: number | undefined;
   let providerCode: string | undefined;
-  if (axios.isAxiosError(error)) {
-    const path = error.config?.url?.split("?")[0];
-    stage = path?.endsWith("/userinfo") ? "userinfo" : "token";
-    status = error.response?.status;
-    providerCode = safeProviderCode(error.response?.data?.error);
+  if (error instanceof ProviderError || axios.isAxiosError(error)) {
+    const path =
+      error instanceof ProviderError
+        ? undefined
+        : error.config?.url?.split("?")[0];
+    stage = (
+      error instanceof ProviderError
+        ? error.step === "userinfo"
+        : path?.endsWith("/userinfo")
+    )
+      ? "userinfo"
+      : "token";
+    status =
+      error instanceof ProviderError ? error.status : error.response?.status;
+    const data: unknown =
+      error instanceof ProviderError ? error.data : error.response?.data;
+    providerCode = safeProviderCode(
+      data && typeof data === "object" && "error" in data
+        ? data.error
+        : undefined,
+    );
     if (!status || status >= 500) reason = "PROVIDER_UNAVAILABLE";
     else if (stage === "userinfo") reason = "USERINFO_FAILED";
     else if (

@@ -27,6 +27,12 @@ export function resolveClient(
   return client;
 }
 export function providerFailure(error: unknown) {
+  if (error instanceof ProviderError)
+    return {
+      message: error.message,
+      status: error.status || 500,
+      ...(error.data ? { data: error.data } : {}),
+    };
   const e =
     error && typeof error === "object"
       ? (error as {
@@ -45,4 +51,52 @@ export function providerFailure(error: unknown) {
         : 500,
     ...(e.response?.data ? { data: e.response.data } : {}),
   };
+}
+
+export class UpstreamUnavailableError extends Error {
+  constructor(
+    readonly reasonCode: string,
+    cause: unknown,
+  ) {
+    super(reasonCode, { cause });
+    this.name = "UpstreamUnavailableError";
+  }
+}
+
+export type ProviderStep = "authentication" | "dcql" | "token" | "userinfo";
+/** Provider boundary only; raw payload remains private unless an existing API contract exposes it. */
+export class ProviderError extends Error {
+  readonly status?: number;
+  readonly data?: unknown;
+  constructor(
+    readonly step: ProviderStep,
+    error: unknown,
+  ) {
+    const details = providerFailure(error);
+    super(details.message);
+    this.name = "ProviderError";
+    const raw =
+      error && typeof error === "object"
+        ? (error as { response?: { status?: unknown } })
+        : {};
+    this.status =
+      error instanceof ProviderError
+        ? error.status
+        : typeof raw.response?.status === "number"
+          ? raw.response.status
+          : undefined;
+    this.data = details.data;
+  }
+}
+export async function providerCall<T>(
+  step: ProviderStep,
+  call: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await call();
+  } catch (error) {
+    throw error instanceof ProviderError
+      ? error
+      : new ProviderError(step, error);
+  }
 }

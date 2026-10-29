@@ -1,3 +1,4 @@
+import { providerCall } from "@/server/shared/errors";
 import { randomUUID } from "node:crypto";
 import axios from "axios";
 import { postForm } from "@/server/shared/http-client";
@@ -64,23 +65,27 @@ export async function startAuthentication(
     if (loginHint) form.login_hint = loginHint;
     if (carrierHint) form.carrier_hint = carrierHint;
   }
-  const auth = await postForm(root + "/ext/ciba/auth", form);
+  const auth = await providerCall("authentication", () =>
+    postForm(root + "/ext/ciba/auth", form),
+  );
   if (!auth.auth_req_id)
     throw new Error("No authReqId received from auth response");
   if (protocol === "sms") return { authReqId: auth.auth_req_id, nonce };
-  const { data } = await axios.post<unknown>(
-    root + "/ext/bc/ts43/dcql",
-    {
-      operation:
-        operation || (loginHint ? "VerifyPhoneNumber" : "GetPhoneNumber"),
-      nonce,
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${auth.auth_req_id}`,
-        "Content-Type": "application/json",
+  const { data } = await providerCall("dcql", () =>
+    axios.post<unknown>(
+      root + "/ext/bc/ts43/dcql",
+      {
+        operation:
+          operation || (loginHint ? "VerifyPhoneNumber" : "GetPhoneNumber"),
+        nonce,
       },
-    },
+      {
+        headers: {
+          Authorization: `Bearer ${auth.auth_req_id}`,
+          "Content-Type": "application/json",
+        },
+      },
+    ),
   );
   return {
     authReqId: auth.auth_req_id,
@@ -121,11 +126,15 @@ export async function exchangeToken(
       },
     );
   } catch {}
-  const token = await postForm(root + "/token", {
-    client_id: clientId,
-    client_secret: clientSecret,
-    grant_type: "urn:openid:params:grant-type:ciba",
-    auth_req_id: authReqId,
-  });
-  return postForm(root + "/userinfo", { access_token: token.access_token });
+  const token = await providerCall("token", () =>
+    postForm(root + "/token", {
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: "urn:openid:params:grant-type:ciba",
+      auth_req_id: authReqId,
+    }),
+  );
+  return providerCall("userinfo", () =>
+    postForm(root + "/userinfo", { access_token: token.access_token }),
+  );
 }

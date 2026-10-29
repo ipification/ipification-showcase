@@ -1,12 +1,13 @@
+import { UpstreamUnavailableError } from "@/server/shared/errors";
 import axios from "axios";
 import { GoogleAuth } from "google-auth-library";
 
 const PLAY_INTEGRITY_SCOPE = "https://www.googleapis.com/auth/playintegrity";
 
-class PlayIntegrityUnavailableError extends Error {
+class PlayIntegrityUnavailableError extends UpstreamUnavailableError {
   reasonCode: string;
   constructor(reasonCode: string, cause: unknown) {
-    super(reasonCode);
+    super(reasonCode, cause);
     this.name = "PlayIntegrityUnavailableError";
     this.reasonCode = reasonCode;
     this.cause = cause;
