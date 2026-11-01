@@ -1,5 +1,7 @@
 # Play Integrity backend demo
 
+> Historical reference: the application now lives at the repository root. Use the [current integration guide](nextjs/README.md) for setup and flows.
+
 > A separate Next.js application is being migrated in `showcase-next/`. See the [migration guide](NEXTJS_MIGRATION.md) for its runtime configuration, commands, compatibility limits and verification. The existing Express application remains available.
 
 

@@ -1,5 +1,7 @@
 # Google Play Integrity + IPification — mobile demo
 
+> Historical reference: the application now lives at the repository root. Use the [current integration guide](nextjs/README.md) for setup and flows.
+
 This document describes an Android demo that checks Google Play Integrity before starting an IPification authentication.
 
 ## Scope
