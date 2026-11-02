@@ -1,0 +1,60 @@
+import { test, expect } from "vitest";
+import { createPlayIntegrityService } from "@/server/integrity/verifier";
+function fixture(overrides: Record<string, any> = {}) {
+  const decoded = {
+    tokenPayloadExternal: {
+      requestDetails: {
+        requestHash: "hash",
+        requestPackageName: "com.fixture",
+        timestampMillis: "0",
+      },
+      appIntegrity: { appRecognitionVerdict: "PLAY_RECOGNIZED" },
+      deviceIntegrity: { deviceRecognitionVerdict: ["MEETS_DEVICE_INTEGRITY"] },
+      ...overrides,
+    },
+  };
+  return createPlayIntegrityService({
+    authClient: { getAccessToken: async () => ({ token: "fixture-token" }) },
+    httpClient: { post: async () => ({ data: decoded }) },
+    packageName: "com.fixture",
+    timeoutMs: 10000,
+  });
+}
+test("recognized matching verdict allows without reintroducing timestamp freshness", async () => {
+  const verdict = await fixture().verify({
+    integrityToken: "opaque",
+    expectedRequestHash: "hash",
+    expectedPackageName: "com.fixture",
+  });
+  expect(verdict.decision).toBe("allow");
+  expect(JSON.stringify(verdict)).not.toContain("fixture-token");
+});
+test("mismatch and device policy fail with stable reason codes", async () => {
+  const verdict = await fixture({
+    deviceIntegrity: { deviceRecognitionVerdict: [] },
+  }).verify({
+    integrityToken: "opaque",
+    expectedRequestHash: "wrong",
+    expectedPackageName: "com.other",
+  });
+  expect(verdict.reasonCodes).toEqual([
+    "REQUEST_HASH_MISMATCH",
+    "PACKAGE_NAME_MISMATCH",
+    "DEVICE_INTEGRITY_NOT_MET",
+  ]);
+});
+test("decode timeout is mapped to unavailable without exposing Google payload", async () => {
+  const service = createPlayIntegrityService({
+    authClient: { getAccessToken: async () => ({ token: "fixture-token" }) },
+    httpClient: {
+      post: async () => {
+        throw { code: "ETIMEDOUT" };
+      },
+    },
+    packageName: "com.fixture",
+    timeoutMs: 10000,
+  });
+  await expect(
+    service.verify({ integrityToken: "opaque" }),
+  ).rejects.toMatchObject({ reasonCode: "GOOGLE_DECODE_TIMEOUT" });
+});

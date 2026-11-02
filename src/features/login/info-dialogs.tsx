@@ -1,0 +1,41 @@
+"use client";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+export function InfoDialogs({
+  server,
+  locale,
+}: {
+  server?: { id: string; url: string };
+  locale: Record<string, any>;
+}) {
+  return (
+    <Dialog>
+      <DialogTrigger className="hover:text-primary">
+        {locale.footer.about}
+      </DialogTrigger>
+      <DialogContent className="legacy-dialog legacy-about-dialog">
+        <DialogHeader>
+          <DialogTitle>{locale.modals.about_title}</DialogTitle>
+          <DialogDescription>
+            {locale.modals.server_label}: {server?.id}
+          </DialogDescription>
+        </DialogHeader>
+        <p className="break-all text-sm">{server?.url}</p>
+        <a
+          href="https://developer.ipification.com/#/"
+          target="_blank"
+          rel="noreferrer"
+          className="text-primary"
+        >
+          {locale.modals.developer_link}
+        </a>
+      </DialogContent>
+    </Dialog>
+  );
+}

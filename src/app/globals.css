@@ -1,0 +1,185 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "intl-tel-input/styles";
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--border);
+  --color-ring: var(--primary);
+  --color-accent: var(--muted);
+  --color-accent-foreground: var(--foreground);
+  --color-secondary: var(--muted);
+  --color-secondary-foreground: var(--foreground);
+  --color-destructive: #b42318;
+  --color-popover: #ffffff;
+  --color-popover-foreground: var(--foreground);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+}
+:root {
+  --background: #f5f7fa;
+  --foreground: #17283b;
+  --primary: #0064d2;
+  --primary-foreground: #ffffff;
+  --card: #ffffff;
+  --muted: #edf2f7;
+  --muted-foreground: #586b80;
+  --border: #dbe3ec;
+  --radius: 0.875rem;
+}
+* {
+  border-color: var(--border);
+}
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+button,
+a,
+input,
+select {
+  touch-action: manipulation;
+}
+button:not(:disabled),
+a {
+  cursor: pointer;
+}
+.iti {
+  width: 100%;
+  --iti-border-color: var(--border);
+  --iti-dropdown-bg: white;
+}
+.iti input {
+  width: 100%;
+}
+
+/* Keep the showcase navigation distinct from generic dialog/form tabs. */
+.showcase-tabs[data-slot="tabs-list"] {
+  height: auto;
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #f2f5f9;
+}
+.showcase-tabs [data-slot="tabs-trigger"] {
+  min-width: 0;
+  min-height: 48px;
+  height: auto;
+  gap: 7px;
+  padding: 10px 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  box-shadow: none;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+.showcase-tabs [data-slot="tabs-trigger"]:hover {
+  color: var(--foreground);
+  background: var(--card);
+}
+.showcase-tabs [data-slot="tabs-trigger"][data-state="active"] {
+  color: var(--primary-foreground);
+  background: var(--primary);
+  border-color: var(--primary);
+  box-shadow:
+    0 2px 4px rgb(23 40 59 / 12%),
+    0 1px 2px rgb(23 40 59 / 8%);
+}
+.showcase-tabs [data-slot="tabs-trigger"]:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+@media (max-width: 360px) {
+  .showcase-tabs [data-slot="tabs-trigger"] svg {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .showcase-tabs [data-slot="tabs-trigger"] {
+    transition: none;
+  }
+}
+
+/* Authentication methods are equal choices; reserve solid brand color for actions. */
+.showcase-method[data-slot="button"] {
+  width: 100%;
+  min-height: 58px;
+  height: auto;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: 0 1px 2px rgb(23 40 59 / 3%);
+  text-align: left;
+  white-space: normal;
+}
+.showcase-method-icon {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--primary) 8%, white);
+  color: var(--primary);
+}
+.showcase-method .showcase-method-arrow {
+  color: var(--muted-foreground);
+  transition:
+    transform 150ms ease,
+    color 150ms ease;
+}
+.showcase-method[data-slot="button"]:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  background: color-mix(in srgb, var(--primary) 3%, white);
+  color: var(--primary);
+}
+.showcase-method:hover:not(:disabled) .showcase-method-arrow {
+  color: var(--primary);
+  transform: translateX(2px);
+}
+.showcase-method[data-slot="button"]:active:not(:disabled) {
+  background: color-mix(in srgb, var(--primary) 7%, white);
+}
+.showcase-method[data-slot="button"]:disabled {
+  background: #f8fafc;
+  border-color: #e7edf3;
+  color: #77879a;
+  box-shadow: none;
+  opacity: 1;
+}
+.showcase-method:disabled .showcase-method-icon {
+  background: #edf2f7;
+  color: #77879a;
+}
+.showcase-method:disabled .showcase-method-arrow {
+  color: #a6b2bf;
+}
+@media (prefers-reduced-motion: reduce) {
+  .showcase-method .showcase-method-arrow {
+    transition: none;
+    transform: none;
+  }
+}

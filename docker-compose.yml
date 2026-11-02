@@ -1,12 +1,50 @@
 services:
-  app:
-    restart: unless-stopped
+  showcase-next:
+    image: ipification_showcase_next:local
     build:
       context: .
-    image: "ipification_showcase"
+    restart: unless-stopped
+    init: true
     environment:
-      PORT: 3001
+      NODE_ENV: production
+      APP_ENV: ${SHOWCASE_APP_ENV:-stage}
+      NODE_CONFIG_ENV: ${SHOWCASE_APP_ENV:-stage}
+      NODE_CONFIG_DIR: /run/showcase-config
+      REDIS_URL: redis://showcase-redis:6379
+      SHOWCASE_KEY_PREFIX: 'showcase-next:${SHOWCASE_APP_ENV:-stage}:'
+      TRUST_PROXY_HOPS: ${SHOWCASE_TRUST_PROXY_HOPS:-0}
+      PORT: 3002
     ports:
-      - 3001:3001
+      - '3002:3002'
     volumes:
-      - ./config/default.json:/usr/app/config/default.json
+      - type: bind
+        source: ./config/default.json
+        target: /run/showcase-config/default.json
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      showcase-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3002/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    stop_grace_period: 15s
+  showcase-redis:
+    image: redis:7.4.7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '127.0.0.1:6380:6379'
+    volumes:
+      - showcase-next-redis:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+volumes:
+  showcase-next-redis:
