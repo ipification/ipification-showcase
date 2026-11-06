@@ -66,7 +66,7 @@ block content
 															button.btn_full.btn.btn_IM.btnLoginPhone.btn-user-flow#pvn_ipificator(data-title=get_flow_title('pvn_ipificator', locale.sections.pnv.title) data-user-flow='pvn_ipificator' data-client-id=client.client_id, style="display: none") #{locale.sections.pnv.button_ip_via_app_label || locale.buttons.ip_via_app}
 																span.right-icon
 														else if flow === 'pvn_sim'
-															button.btn_full.btn.btn_IM.btnLoginPhone.btn-user-flow#pvn_sim(data-title=get_flow_title('pvn_sim', locale.sections.pnv.title) data-user-flow='pvn_sim' data-client-id=client.client_id) #{locale.sections.pnv.button_sim_label || locale.buttons.sim}
+															button.btn_full.btn.btn_IM.btnLoginPhone.btn-user-flow.d-none#pvn_sim(data-title=get_flow_title('pvn_sim', locale.sections.pnv.title) data-user-flow='pvn_sim' data-client-id=client.client_id) #{locale.sections.pnv.button_sim_label || locale.buttons.sim}
 																span.right-icon
 														else if flow === 'pvn_sms'
 															button.btn_full.btn.btn_sms.btnLoginPhone.btn-user-flow#pvn_sms(data-title=get_flow_title('pvn_sms', locale.sections.pnv.title) data-user-flow='pvn_sms' data-client-id=client.client_id) #{locale.sections.pnv.button_sms_label || locale.buttons.sms}
@@ -92,7 +92,7 @@ block content
 													span.right-icon
 													span #{locale.sections.login.button_im_label || locale.buttons.im}
 											else if flow === 'login_sim'
-												button.btn_full_blue.btn-user-flow#login_sim(type='button' data-title=get_flow_title('login_sim', locale.buttons.sim) data-user-flow='login_sim' data-client-id=client.client_id)
+												button.btn_full_blue.btn-user-flow.d-none#login_sim(type='button' data-title=get_flow_title('login_sim', locale.buttons.sim) data-user-flow='login_sim' data-client-id=client.client_id)
 													span.right-icon
 													span #{locale.sections.login.button_sim_label || locale.buttons.sim}
 

@@ -203,6 +203,10 @@ function sanitizeOtpValue(value) {
 }
 
 $(document).ready(function () {
+  if (window.DigitalCredential?.userAgentAllowsProtocol?.('openid4vp-v1-unsigned') === true) {
+    $('#login_sim, #pvn_sim').removeClass('d-none');
+  }
+
   // Initialize auth server dropdown
   initAuthServerDropdown();
 
