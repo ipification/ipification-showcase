@@ -174,8 +174,15 @@ test("QR scan window is two minutes and scanning switches to the completion coun
   ).toBeVisible();
   await page.clock.fastForward(119000);
   scanned = true;
-  await page.clock.fastForward(3000);
-  await expect(page.getByText(/Verification in progress/)).toBeVisible();
+  // The fake clock is paused while the intercepted status response completes.
+  // Advance polling intervals until the browser observes the scan; a single
+  // fast-forward can run while an earlier request is still in flight.
+  await expect
+    .poll(async () => {
+      await page.clock.runFor(2000);
+      return page.getByText(/Verification in progress/).isVisible();
+    })
+    .toBe(true);
   await page.clock.fastForward(1000);
   await expect(page.getByText(/Complete verification in 04:/)).toBeVisible();
   await expect(
