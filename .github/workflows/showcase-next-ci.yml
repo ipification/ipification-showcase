@@ -48,6 +48,7 @@ jobs:
         run: >-
           npm run test:e2e --
           e2e/main-flows.spec.ts
+          e2e/sim-availability.spec.ts
           e2e/qr.spec.ts
           e2e/sms.spec.ts
           e2e/result.spec.ts

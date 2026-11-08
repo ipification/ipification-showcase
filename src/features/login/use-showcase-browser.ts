@@ -1,5 +1,27 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+
+// Browser support is checked during hydration; the server always starts hidden.
+function subscribeToSimAvailability() {
+  return () => {};
+}
+function isSimAvailable() {
+  try {
+    const digitalCredential = (
+      window as Window & {
+        DigitalCredential?: {
+          userAgentAllowsProtocol?: (protocol: string) => boolean;
+        };
+      }
+    ).DigitalCredential;
+    return (
+      digitalCredential?.userAgentAllowsProtocol?.("openid4vp-v1-unsigned") ===
+      true
+    );
+  } catch {
+    return false;
+  }
+}
 
 /** Showcase-only browser presentation; no authentication requests live here. */
 export function useShowcaseBrowser(
@@ -8,6 +30,11 @@ export function useShowcaseBrowser(
 ) {
   const [country, setCountry] = useState(defaultCountry || "rs");
   const [mobile, setMobile] = useState(false);
+  const simAvailable = useSyncExternalStore(
+    subscribeToSimAvailability,
+    isSimAvailable,
+    () => false,
+  );
   const [keyboardNavigation, setKeyboardNavigation] = useState(false);
 
   useEffect(() => {
@@ -59,5 +86,5 @@ export function useShowcaseBrowser(
     return () => window.removeEventListener("resize", resize);
   }, [defaultCountry, appEnv]);
 
-  return { country, mobile, keyboardNavigation };
+  return { country, mobile, simAvailable, keyboardNavigation };
 }

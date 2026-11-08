@@ -20,7 +20,7 @@ for (const malformed of [
           exchangeCodeAndGetUserInfo(
             provider.url + "/token",
             provider.url + "/userinfo",
-            { code: "fixture" },
+            { code: "fixture", client_id: "fixture", client_secret: "fixture" },
           ),
         () =>
           verifySmsCode({

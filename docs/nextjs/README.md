@@ -12,6 +12,7 @@ This guide is the starting point for the Next.js showcase documentation. It expl
 | Verify or obtain a number using a SIM credential | PNV SIM, Login SIM | [SIM / TS43](sim.md) |
 | Verify an entered number with an OTP | PNV SMS | [SMS](sms.md) |
 | Start on desktop and continue on a phone | QR for supported browser flows | [QR and polling](qr.md) |
+| Exchange a mobile code or read a stored Showcase result | Mobile and S2S endpoints | [Mobile and S2S](mobile-s2s.md) |
 
 [Run the demo](running.md) · [Showcase HTTP endpoints](api.md) · [Source walkthrough](../NEXTJS_AUTH_FLOWS.md)
 

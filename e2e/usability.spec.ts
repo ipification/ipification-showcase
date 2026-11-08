@@ -143,6 +143,10 @@ test("cancelling a pending SIM credential unlocks retry and an old attempt canno
   page,
 }) => {
   await page.addInitScript(() => {
+    Object.defineProperty(window, "DigitalCredential", {
+      configurable: true,
+      value: { userAgentAllowsProtocol: () => true },
+    });
     (window as any).credentialRequests = [];
     Object.defineProperty(navigator.credentials, "get", {
       configurable: true,

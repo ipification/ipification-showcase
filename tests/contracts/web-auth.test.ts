@@ -110,7 +110,10 @@ test("web callbacks retain 302, QR/backchannel order, independent session and S2
       origin + `/auth/complete?state=${im.state}`,
     );
     const qr = await prepareAttempt(origin, "pvn_ip", true);
-    provider.behavior.userInfo = { phone_number_verified: "false" };
+    provider.behavior.userInfo = {
+      sub: "fixture-subject",
+      phone_number_verified: "false",
+    };
     expect(
       (
         await get(`/auth/callback/pvn_ip/stage?code=c&state=${qr.state}`, {
@@ -119,7 +122,10 @@ test("web callbacks retain 302, QR/backchannel order, independent session and S2
       ).headers.get("location"),
     ).toBe("/auth/qrcode/error");
     const qr2 = await prepareAttempt(origin, "pvn_ip", true);
-    provider.behavior.userInfo = { phone_number_verified: false };
+    provider.behavior.userInfo = {
+      sub: "fixture-subject",
+      phone_number_verified: false,
+    };
     expect(
       (
         await get(`/auth/callback/pvn_ip/stage?code=c&state=${qr2.state}`, {

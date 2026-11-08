@@ -29,7 +29,11 @@ for (const operation of ["token", "userinfo", "auth", "dcql"] as const) {
             : exchangeCodeAndGetUserInfo(
                 provider.url + "/token",
                 provider.url + "/userinfo",
-                { code: "PRIVATE_CODE", client_secret: "PRIVATE_SECRET" },
+                {
+                  code: "PRIVATE_CODE",
+                  client_id: "fixture",
+                  client_secret: "PRIVATE_SECRET",
+                },
               );
       await expect(request).rejects.toMatchObject({ timedOut: true });
       const failure = await request.catch((error) => error);

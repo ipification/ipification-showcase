@@ -26,7 +26,7 @@ sequenceDiagram
     B->>I: authorize with state and login_hint
     I-->>B: redirect to callback with state and code or error
     B->>S: GET /auth/callback/pvn_ip/{serverId}
-    S->>I: POST token, then POST userinfo
+    S->>I: POST token, then GET userinfo (Bearer token)
     S-->>B: redirect through /auth/complete
     B->>S: GET /user/info using display session
 ```
@@ -54,25 +54,24 @@ const { url } = await response.json();
 window.location.assign(url);
 ```
 
-For your own backend, the provider exchange is conceptually a form POST (do not expose its response or credentials to the browser):
+The backend uses [`openid-client`](https://github.com/panva/openid-client) for code exchange and userinfo. The app constructs its configuration from the configured Keycloak endpoints, uses `client_secret_post` at the token endpoint, then sends the access token as a Bearer header to userinfo. The library requires a conforming token response including `token_type` and a userinfo response containing `sub`. See [provider](../../src/server/auth/provider.ts) and [HTTP client](../../src/server/shared/http-client.ts).
 
 ```js
-const form = new URLSearchParams({
-  grant_type: 'authorization_code', code,
-  client_id: clientId, client_secret: clientSecret, redirect_uri: callbackUrl,
+import * as oidc from 'openid-client';
+
+// Run only on your backend, after validating the callback and state.
+const config = new oidc.Configuration({
+  issuer: issuerUrl, token_endpoint: `${oidcRoot}/token`,
+  userinfo_endpoint: `${oidcRoot}/userinfo`,
+}, clientId, clientSecret);
+const tokens = await oidc.genericGrantRequest(config, 'authorization_code', {
+  code, redirect_uri: callbackUrl,
 });
-const tokenResponse = await fetch(`${oidcRoot}/token`, { method: 'POST', body: form });
-if (!tokenResponse.ok) throw new Error('Token exchange failed');
-const { access_token } = await tokenResponse.json();
-if (!access_token) throw new Error('Missing access token');
-const userResponse = await fetch(`${oidcRoot}/userinfo`, {
-  method: 'POST', body: new URLSearchParams({ access_token }),
-});
-if (!userResponse.ok) throw new Error('Userinfo request failed');
-const userInfo = await userResponse.json();
+// Use the validated ID-token subject when available and required by your flow.
+const userInfo = await oidc.fetchUserInfo(config, tokens.access_token, expectedSubject);
 ```
 
-Here `oidcRoot` is `{server.url}/realms/{realm}/protocol/openid-connect`. This illustrates the provider calls in the showcase; it omits the required secure callback/state/session management. See [provider](../../src/server/auth/provider.ts) and [HTTP client](../../src/server/shared/http-client.ts).
+The example omits required callback/state, nonce, ID-token and session checks. The showcase currently binds its callback to the attempt but does not validate an ID-token subject for comparison, so its helper uses `skipSubjectCheck`; customers should use their validated expected subject and their own complete OIDC security policy. SMS/SIM retain their existing CIBA-specific HTTP flow. Configuration requires HTTPS except for same-origin loopback test fixtures.
 
 ## Read the result correctly
 

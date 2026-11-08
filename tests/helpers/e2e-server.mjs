@@ -67,24 +67,28 @@ const provider = createServer(async (req, res) => {
   } else if (u.pathname.endsWith("/token"))
     res.end(
       JSON.stringify({
+        token_type: "Bearer",
         access_token: Object.hasOwn(resultClaims, body.code)
           ? body.code
           : "browser-token",
       }),
     );
-  else
+  else {
+    const accessToken =
+      body.access_token || req.headers.authorization?.replace(/^Bearer /, "");
     res.end(
       JSON.stringify({
         sub: "browser-user",
         phone_number: "+12025550123",
-        phone_number_verified: Object.hasOwn(resultClaims, body.access_token)
-          ? resultClaims[body.access_token]
+        phone_number_verified: Object.hasOwn(resultClaims, accessToken)
+          ? resultClaims[accessToken]
           : "true",
-        ...(Object.hasOwn(resultClaims, body.access_token)
+        ...(Object.hasOwn(resultClaims, accessToken)
           ? { custom_claim: { enabled: false, count: 0, value: null } }
           : {}),
       }),
     );
+  }
 });
 await new Promise((r) => provider.listen(0, "127.0.0.1", r));
 const dir = mkdtempSync(path.join(tmpdir(), "showcase-browser-"));

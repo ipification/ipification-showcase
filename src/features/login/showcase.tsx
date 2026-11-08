@@ -21,10 +21,8 @@ import { ShowcaseHeader, ShowcaseFooter } from "./showcase-layout";
 
 // The screen only selects a configured method; useVerification owns the flow.
 export function Showcase({ config }: { config: PublicShowcaseConfig }) {
-  const { country, mobile, keyboardNavigation } = useShowcaseBrowser(
-    config.defaultCountry,
-    config.appEnv,
-  );
+  const { country, mobile, simAvailable, keyboardNavigation } =
+    useShowcaseBrowser(config.defaultCountry, config.appEnv);
   const tabs = useMemo(
     () =>
       (Object.keys(flowGroups) as Tab[]).filter((tab) =>
@@ -56,7 +54,12 @@ export function Showcase({ config }: { config: PublicShowcaseConfig }) {
     flows = flowGroups[preferences.tab] || [];
   function renderMethod(flow: string) {
     const client = config.clients.find((c) => c.user_flow === flow);
-    if (!client || (flow === "pvn_ipificator" && !mobile)) return null;
+    if (
+      !client ||
+      (flow === "pvn_ipificator" && !mobile) ||
+      ((flow === "pvn_sim" || flow === "login_sim") && !simAvailable)
+    )
+      return null;
     const key = labelKey(flow);
     const label =
       section?.[`button_${key}_label`] ||

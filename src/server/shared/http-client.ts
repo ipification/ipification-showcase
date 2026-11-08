@@ -4,6 +4,8 @@ import {
   ProviderRequestTimeoutError,
 } from "./errors";
 import axios from "axios";
+import * as oidc from "openid-client";
+import type { UserInfo } from "@/shared/contracts";
 import qs from "qs";
 const DEFAULT_PROVIDER_TIMEOUT_MS = 15000;
 function providerTimeoutMs() {
@@ -61,16 +63,97 @@ export async function exchangeCodeAndGetUserInfo(
   tokenUrl: string,
   userUrl: string,
   params: Record<string, unknown>,
-) {
-  const tokenInfo = await providerCall("token", async () =>
-    validateTokenResponse(await postForm(tokenUrl, params)),
+): Promise<{
+  tokenInfo: Record<string, unknown> & { access_token: string };
+  userInfo: UserInfo;
+}> {
+  const tokenEndpoint = new URL(tokenUrl);
+  const userInfoEndpoint = new URL(userUrl);
+  const config = new oidc.Configuration(
+    {
+      issuer: tokenEndpoint.href.includes("/protocol/openid-connect/")
+        ? tokenEndpoint.href.split("/protocol/openid-connect/")[0]
+        : tokenEndpoint.origin,
+      token_endpoint: tokenEndpoint.href,
+      userinfo_endpoint: userInfoEndpoint.href,
+    },
+    String(params.client_id || ""),
+    String(params.client_secret || ""),
   );
-  const userInfo = await providerCall("userinfo", () =>
-    postForm(userUrl, {
-      access_token: tokenInfo.access_token,
-    }),
-  );
+  config.timeout = providerTimeoutMs() / 1000;
+  // HTTP is only enabled for the loopback fixture used by local tests.
+  if (
+    tokenEndpoint.protocol === "http:" &&
+    userInfoEndpoint.protocol === "http:" &&
+    ["127.0.0.1", "localhost", "[::1]"].includes(tokenEndpoint.hostname) &&
+    tokenEndpoint.origin === userInfoEndpoint.origin
+  )
+    oidc.allowInsecureRequests(config);
+  const grantParameters = new URLSearchParams();
+  for (const [name, value] of Object.entries(params)) {
+    if (
+      !["client_id", "client_secret", "grant_type"].includes(name) &&
+      value != null
+    )
+      grantParameters.set(name, String(value));
+  }
+  const tokenInfo = await providerCall("token", async () => {
+    try {
+      return await oidc.genericGrantRequest(
+        config,
+        String(params.grant_type || "authorization_code"),
+        grantParameters,
+      );
+    } catch (error) {
+      throw normalizeOidcError(error, true);
+    }
+  });
+  const userInfo = await providerCall("userinfo", async () => {
+    try {
+      // The existing demo has no validated ID-token subject to compare here.
+      // State/callback binding remains enforced by the calling authentication service.
+      return await oidc.fetchUserInfo(
+        config,
+        tokenInfo.access_token,
+        oidc.skipSubjectCheck,
+      );
+    } catch (error) {
+      throw normalizeOidcError(error, false);
+    }
+  });
   return { tokenInfo, userInfo };
+}
+
+function normalizeOidcError(error: unknown, token: boolean): unknown {
+  if (error && typeof error === "object") {
+    const details = error as {
+      code?: string;
+      status?: number;
+      message?: string;
+      cause?: unknown;
+      response?: Response;
+    };
+    if (details.code === "OAUTH_TIMEOUT")
+      return new ProviderRequestTimeoutError();
+    if (token && details.code === "OAUTH_INVALID_RESPONSE")
+      return new InvalidTokenResponseError();
+    const status =
+      details.status ||
+      details.response?.status ||
+      (details.cause instanceof Response ? details.cause.status : undefined);
+    if (status)
+      return {
+        message: `Request failed with status code ${status}`,
+        response: {
+          status,
+          data:
+            details.cause && !(details.cause instanceof Response)
+              ? details.cause
+              : undefined,
+        },
+      };
+  }
+  return error;
 }
 
 export function validateTokenResponse(

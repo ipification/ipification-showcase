@@ -2,7 +2,7 @@
 
 [Guide home](README.md) · [Showcase endpoints](api.md)
 
-The showcase supports `pvn_sim` for an entered phone and `login_sim` for obtaining a number. The flow requires an eligible carrier, device and browser supporting the digital credential request; selecting SIM does not guarantee support. Configure the appropriate client and provider credentials.
+The showcase supports `pvn_sim` for an entered phone and `login_sim` for obtaining a number. The app shows the configured SIM buttons only when `DigitalCredential.userAgentAllowsProtocol("openid4vp-v1-unsigned")` returns `true`; otherwise they remain hidden. The check runs on page load. Completing verification also requires an eligible device and carrier that can provide a TS43 credential. Configure the appropriate client and provider credentials.
 
 1. Browser calls `POST /ts43/auth` with `client_id`, `server_id`, `login_hint`, `carrier_hint`, `scope`, and optionally `operation`. In the current demo PNV uses the phone and `openid ip:phone_verify`; Login uses `anonymous`, `openid ip:phone` and `GetPhoneNumber`. The demo currently sends `carrier_hint: 51010`; do not assume that value is suitable for your deployment.
 2. The showcase calls provider `/ext/ciba/auth`, then `/ext/bc/ts43/dcql`, returning `auth_req_id`, `nonce` and `digital_request`.

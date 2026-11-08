@@ -3,6 +3,10 @@ test("TS43 sends credential response to token endpoint and renders results", asy
   page,
 }) => {
   await page.addInitScript(() => {
+    Object.defineProperty(window, "DigitalCredential", {
+      configurable: true,
+      value: { userAgentAllowsProtocol: () => true },
+    });
     Object.defineProperty(navigator.credentials, "get", {
       value: async () => ({
         data: { vp_token: { "ipification.com": ["fixture-vp"] } },
@@ -28,6 +32,10 @@ test("null credentials show cancellation and keep login available", async ({
   page,
 }) => {
   await page.addInitScript(() => {
+    Object.defineProperty(window, "DigitalCredential", {
+      configurable: true,
+      value: { userAgentAllowsProtocol: () => true },
+    });
     Object.defineProperty(navigator.credentials, "get", {
       value: async () => null,
       configurable: true,

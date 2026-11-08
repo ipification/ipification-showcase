@@ -32,6 +32,8 @@ For the web flow, the [HTTP handlers](../src/server/auth/web.ts) and [applicatio
 | `POST /auth/mobile/login` | `exchangeMobileCode` | Exchange the mobile app's code and submitted redirect URI, then return user info as JSON |
 | `POST /auth/s2s/signin` | `readS2sResult` | Read the raw result previously cached by a callback using its `state` |
 
+For request examples and a comparison of these endpoints, see [Mobile and S2S](nextjs/mobile-s2s.md).
+
 Mobile HTTP response handling lives in [auth/mobile.ts](../src/server/auth/mobile.ts). This API creates no browser session. The existing response precedence allows a provider's `auth_server` field to take precedence over the locally selected server; provider failures retain this endpoint's HTTP 401 mapping.
 
 [S2S signin](../src/app/auth/s2s/signin/route.ts) performs a non-consuming cache read, so callers can read the same stored result again while it remains available. It does not exchange a new authorization code or create a browser session; a cache miss returns an empty HTTP 401 response.

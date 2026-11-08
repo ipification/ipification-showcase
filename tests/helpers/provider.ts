@@ -8,6 +8,7 @@ export async function startProvider() {
   const responded: string[] = [];
   const behavior = {
     userInfo: {
+      sub: "fixture-subject",
       phone_number: "+12025550123",
       phone_number_verified: "true",
     } as Record<string, unknown>,
@@ -16,7 +17,10 @@ export async function startProvider() {
     failAt: "",
     failStatus: 503,
     failBody: { error: "provider-unavailable" } as Record<string, unknown>,
-    tokenResponse: { access_token: "fixture-token" } as unknown,
+    tokenResponse: {
+      access_token: "fixture-token",
+      token_type: "Bearer",
+    } as unknown,
   };
   const server = createServer(async (req, res) => {
     let raw = "";

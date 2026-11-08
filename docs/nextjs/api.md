@@ -37,6 +37,8 @@ The login UI uses `/auth/prepare` before `/auth/start`; calling the old start UR
 | `GET /health/ready` | Checks runtime configuration and Redis; returns 503 when unavailable. |
 | `POST /api/play-integrity/attempt`, `/verify`, `/token-exchange` | Optional Play Integrity flow; full paths share `/api/play-integrity`. Disabled endpoints return 404 unless `PLAY_INTEGRITY_ENABLED=true`. See [Play Integrity](../PLAY_INTEGRITY_IPIFICATION_DEMO.md); verify its deployment assumptions against Next.js code. |
 
+For request examples, response behavior and security boundaries, see [Mobile and S2S](mobile-s2s.md).
+
 In the SMS and TS43 rows, each second path has the same prefix shown in its first path. `/auth/mobile/login` and `/auth/s2s/signin` preserve demo API contracts; their existence does not establish an authorization policy suitable for arbitrary internet-facing clients. Review access controls and protect sensitive requests in your deployment.
 
 For CIBA responses, a successful start includes `auth_server`, `auth_req_id`, `nonce`, and for SIM `digital_request`. Token success returns `auth_server` and provider userinfo. Failures can return JSON or, for some auth errors, text. Session creation can occur for error data; it does not prove verification. See [handlers](../../src/server/ciba/handlers.ts).
