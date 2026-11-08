@@ -1,7 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { startApp, freePort } from "../tests/helpers/processes";
 import { configFixture } from "../tests/helpers/config";
-import { startRedis } from "../tests/helpers/redis";
 test("legacy single-column layout and Identity content order remain usable", async ({
   page,
 }) => {
@@ -57,8 +56,7 @@ test("legacy mobile tabs and phone controls fit without horizontal scrolling", a
 test("inline stage country picker still switches between Wonderland and a real country", async ({
   page,
 }) => {
-  const redis = await startRedis(),
-    config = configFixture({ disabled_select_country: false });
+  const config = configFixture({ disabled_select_country: false });
   const port = await freePort();
   const app = await startApp({
     NODE_ENV: "production",
@@ -66,7 +64,6 @@ test("inline stage country picker still switches between Wonderland and a real c
     NODE_CONFIG_ENV: "stage",
     NODE_CONFIG_DIR: config.dir,
     PORT: String(port),
-    REDIS_URL: redis.url,
   });
   try {
     await page.goto(app.url + "/auth/login#pnv");
@@ -98,6 +95,5 @@ test("inline stage country picker still switches between Wonderland and a real c
   } finally {
     await app.stop();
     config.remove();
-    await redis.stop();
   }
 });

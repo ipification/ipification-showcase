@@ -7,7 +7,7 @@ QR connects two separate browser contexts. The desktop prepares the attempt and 
 ```mermaid
 sequenceDiagram
     participant D as Desktop browser
-    participant S as Showcase backend and Redis
+    participant S as Showcase backend and memory store
     participant P as Phone browser
     participant I as IPification
     D->>S: POST /auth/prepare (qr=true)

@@ -28,10 +28,6 @@ jobs:
           node-version: '24.22.0'
           cache: npm
           cache-dependency-path: package-lock.json
-      - name: Install Redis
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y redis-server
       - name: Install Next.js dependencies
         run: npm ci
       - name: Install Chromium

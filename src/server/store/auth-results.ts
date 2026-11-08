@@ -1,4 +1,4 @@
-import { getRedis, key } from "./redis";
+import { memoryStore } from "./memory";
 import type { DisplayResult, UserInfo } from "@/shared/contracts";
 type Store = {
   get: (key: string) => Promise<DisplayResult | UserInfo | null>;
@@ -31,13 +31,10 @@ export function createAuthResultStore(
 }
 const store = createAuthResultStore({
   async get(id) {
-    const value = await (await getRedis()).get(key("result:" + id));
-    return value ? (JSON.parse(value) as DisplayResult | UserInfo) : null;
+    return memoryStore.get<DisplayResult | UserInfo>("result:" + id) ?? null;
   },
   async set(id, value) {
-    await (
-      await getRedis()
-    ).set(key("result:" + id), JSON.stringify(value), { PX: 3600000 });
+    memoryStore.set("result:" + id, value, 3600000);
   },
 });
 export const { saveResult, waitForResult, getUserInfo } = store;

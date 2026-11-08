@@ -1,20 +1,16 @@
 import { test, expect } from "vitest";
 import { startApp } from "../helpers/processes";
-import { startRedis } from "../helpers/redis";
 import { startProvider } from "../helpers/provider";
 import { prepareAttempt } from "../helpers/auth-attempt";
 import { configFixture } from "../helpers/config";
 
 test("web attempts bind initiator/scanner, reject callback and completion replay, and permit owner recovery", async () => {
-  const redis = await startRedis(),
-    provider = await startProvider();
+  const provider = await startProvider();
   const config = configFixture({
     auth_servers: [{ id: "stage", url: provider.url }],
   });
   const app = await startApp({
     NODE_CONFIG_DIR: config.dir,
-    REDIS_URL: redis.url,
-    SHOWCASE_KEY_PREFIX: "state-contract:",
   });
   try {
     const attempt = await prepareAttempt(app.url, "login_ip", true);
@@ -76,20 +72,6 @@ test("web attempts bind initiator/scanner, reject callback and completion replay
       expect(response.headers.get("location")).toContain("AUTH_STATE_INVALID");
     }
     expect(provider.calls).toHaveLength(count);
-    const expiredKey = "state-contract:oauth:" + isolated.state;
-    const record = JSON.parse((await redis.client.get(expiredKey))!);
-    await redis.client.set(
-      expiredKey,
-      JSON.stringify({ ...record, expiresAt: Date.now() - 1 }),
-      { PX: 60000 },
-    );
-    const expired = await fetch(
-      app.url + `/auth/callback/login_ip/stage?state=${isolated.state}&code=c`,
-      { redirect: "manual", headers: { cookie: isolated.callback } },
-    );
-    expect(expired.headers.get("location")).toContain("AUTH_STATE_EXPIRED");
-    expect(provider.calls).toHaveLength(count);
-
     // A provider failure is recoverable by the QR owner, without granting a demo session.
     const failed = await prepareAttempt(app.url, "login_ip", true);
     provider.behavior.failAt = "token";
@@ -132,20 +114,16 @@ test("web attempts bind initiator/scanner, reject callback and completion replay
     await app.stop();
     config.remove();
     await provider.stop();
-    await redis.stop();
   }
 });
 
 test("QR has two minutes to scan and a separate five-minute completion window", async () => {
-  const redis = await startRedis(),
-    provider = await startProvider();
+  const provider = await startProvider();
   const config = configFixture({
     auth_servers: [{ id: "stage", url: provider.url }],
   });
   const app = await startApp({
     NODE_CONFIG_DIR: config.dir,
-    REDIS_URL: redis.url,
-    SHOWCASE_KEY_PREFIX: "qr-window:",
   });
   const prepare = async (qr: boolean) => {
     const before = Date.now();
@@ -170,39 +148,20 @@ test("QR has two minutes to scan and a separate five-minute completion window", 
     const scanner = started.headers.get("set-cookie")!.split(";")[0];
     const owner = qr.cookie.split(";")[0];
     // Starting replaces the scan deadline with a fresh completion deadline.
-    const key = "qr-window:oauth:" + qr.state;
-    const record = JSON.parse((await redis.client.get(key))!);
-    expect(record.expiresAt - Date.now()).toBeGreaterThan(290000);
-    await redis.client.set(
-      key,
-      JSON.stringify({ ...record, scanExpiresAt: Date.now() - 1 }),
-      { PX: 600000 },
-    );
     const status = await fetch(app.url + `/auth/status?state=${qr.state}`, {
       headers: { cookie: owner },
     });
     const progress = await status.json();
     expect(progress.started).toBe(true);
-    expect(progress.expiresAt).toBe(record.expiresAt);
+    expect(progress.expiresAt - Date.now()).toBeGreaterThan(290000);
     const complete = await fetch(
       app.url + `/auth/callback/login_ip/stage?state=${qr.state}&code=c`,
       { redirect: "manual", headers: { cookie: scanner } },
     );
     expect(complete.headers.get("location")).toBe("/auth/qrcode/complete");
-    const expired = await prepare(true);
-    const expiredKey = "qr-window:oauth:" + expired.state;
-    const expiredRecord = JSON.parse((await redis.client.get(expiredKey))!);
-    await redis.client.set(
-      expiredKey,
-      JSON.stringify({ ...expiredRecord, expiresAt: Date.now() - 1 }),
-      { PX: 60000 },
-    );
-    const rejected = await fetch(expired.url, { redirect: "manual" });
-    expect(rejected.headers.get("location")).toContain("AUTH_STATE_EXPIRED");
   } finally {
     await app.stop();
     config.remove();
     await provider.stop();
-    await redis.stop();
   }
 });

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { getRedis, key } from "./redis";
+import { memoryStore } from "./memory";
 const positive = (name: string, fallback: number) => {
   const n = parseInt(process.env[name] || "", 10);
   return n > 0 ? n : fallback;
@@ -24,12 +24,10 @@ export async function checkTs43Limit(
   ];
   let headers: Record<string, string> = {};
   for (const stage of stages) {
-    const [count, ttl] = (await (
-      await getRedis()
-    ).eval(
-      "local n=redis.call('INCR',KEYS[1]);if n==1 then redis.call('PEXPIRE',KEYS[1],ARGV[1]) end;return {n,redis.call('PTTL',KEYS[1])}",
-      { keys: [key("rate:" + stage.id)], arguments: [String(windowMs)] },
-    )) as number[];
+    const key = "rate:" + stage.id;
+    const count = (memoryStore.get<number>(key) ?? 0) + 1;
+    const ttl = count === 1 ? windowMs : memoryStore.remaining(key);
+    memoryStore.set(key, count, ttl);
     const reset = Math.max(1, Math.ceil(ttl / 1000));
     headers = {
       "RateLimit-Policy": `${stage.limit};w=${Math.ceil(windowMs / 1000)}`,

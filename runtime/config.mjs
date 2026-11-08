@@ -17,7 +17,6 @@ export function initializeConfigEnvironment({
   nextEnv.loadEnvConfig(appRoot, dev);
   process.env.APP_ENV ||= dev ? "development" : "production";
   process.env.NODE_CONFIG_ENV ||= process.env.APP_ENV;
-  process.env.SHOWCASE_KEY_PREFIX ||= `showcase-next:${process.env.APP_ENV}:`;
   process.env.NODE_CONFIG_DIR = (
     process.env.NODE_CONFIG_DIR || path.join(appRoot, "config")
   )

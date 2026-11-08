@@ -1,12 +1,10 @@
 import { prepareAttempt } from "../helpers/auth-attempt";
 import { test, expect } from "vitest";
 import { startApp, freePort } from "../helpers/processes";
-import { startRedis } from "../helpers/redis";
 import { startProvider } from "../helpers/provider";
 import { configFixture } from "../helpers/config";
 test("web callbacks retain 302, QR/backchannel order, independent session and S2S results", async () => {
-  const redis = await startRedis(),
-    provider = await startProvider();
+  const provider = await startProvider();
   const config = configFixture({
     auth_servers: [{ id: "stage", url: provider.url }],
   });
@@ -15,7 +13,6 @@ test("web callbacks retain 302, QR/backchannel order, independent session and S2
   const app = await startApp({
     PORT: String(port),
     NODE_CONFIG_DIR: config.dir,
-    REDIS_URL: redis.url,
   });
   const get = (path: string, options: RequestInit = {}) =>
     fetch(origin + path, { redirect: "manual", ...options });
@@ -137,13 +134,11 @@ test("web callbacks retain 302, QR/backchannel order, independent session and S2
     await app.stop();
     config.remove();
     await provider.stop();
-    await redis.stop();
   }
 });
 
 test("callback errors reach the bound browser sessions without exposing them in redirects", async () => {
-  const redis = await startRedis(),
-    provider = await startProvider();
+  const provider = await startProvider();
   const config = configFixture({
     auth_servers: [{ id: "stage", url: provider.url }],
   });
@@ -152,7 +147,6 @@ test("callback errors reach the bound browser sessions without exposing them in 
   const app = await startApp({
     PORT: String(port),
     NODE_CONFIG_DIR: config.dir,
-    REDIS_URL: redis.url,
   });
   const get = (path: string, cookie?: string) =>
     fetch(origin + path, {
@@ -230,6 +224,5 @@ test("callback errors reach the bound browser sessions without exposing them in 
     await app.stop();
     config.remove();
     await provider.stop();
-    await redis.stop();
   }
 });

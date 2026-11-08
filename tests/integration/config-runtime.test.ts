@@ -15,7 +15,6 @@ test("config checker validates mounted config without Redis or provider calls", 
           APP_ENV: "stage",
           NODE_CONFIG_ENV: "stage",
           NODE_CONFIG_DIR: dir,
-          REDIS_URL: "redis://127.0.0.1:1",
         },
         encoding: "utf8",
       });

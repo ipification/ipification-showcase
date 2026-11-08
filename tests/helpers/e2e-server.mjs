@@ -1,28 +1,9 @@
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { createServer as createNetServer } from "node:net";
 import { mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 const port = process.env.E2E_PORT || "3002";
-const allocator = createNetServer();
-await new Promise((r) => allocator.listen(0, "127.0.0.1", r));
-const redisPort = allocator.address().port;
-await new Promise((r) => allocator.close(r));
-const redis = spawn(
-  "redis-server",
-  [
-    "--bind",
-    "127.0.0.1",
-    "--port",
-    String(redisPort),
-    "--save",
-    "",
-    "--appendonly",
-    "no",
-  ],
-  { stdio: "ignore" },
-);
 const resultClaims = {
   "fixture-result-missing": undefined,
   "fixture-result-boolean-true": true,
@@ -112,14 +93,11 @@ const child = spawn(process.execPath, ["server.mjs"], {
     APP_ENV: "development",
     NODE_CONFIG_ENV: "development",
     NODE_CONFIG_DIR: dir,
-    REDIS_URL: `redis://127.0.0.1:${redisPort}`,
-    SHOWCASE_KEY_PREFIX: "showcase-browser:",
   },
   stdio: "inherit",
 });
 function shutdown() {
   child.kill("SIGTERM");
-  redis.kill("SIGTERM");
   provider.closeAllConnections();
   provider.close();
   rmSync(dir, { recursive: true, force: true });

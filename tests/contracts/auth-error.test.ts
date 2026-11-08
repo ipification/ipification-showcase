@@ -3,19 +3,15 @@ import { test, expect } from "vitest";
 import { startApp, freePort } from "../helpers/processes";
 import { configFixture } from "../helpers/config";
 import { startProvider } from "../helpers/provider";
-import { startRedis } from "../helpers/redis";
 
 test("callback failures show safe actionable screens and retain machine-readable backchannel failure", async () => {
   const provider = await startProvider();
-  const redis = await startRedis();
   const config = configFixture({
     auth_servers: [{ id: "stage", url: provider.url }],
   });
   const port = await freePort();
   const app = await startApp({
     NODE_ENV: "production",
-    REDIS_URL: redis.url,
-    SHOWCASE_KEY_PREFIX: "friendly-error-test:",
     PORT: String(port),
     NODE_CONFIG_DIR: config.dir,
   });
@@ -127,6 +123,5 @@ test("callback failures show safe actionable screens and retain machine-readable
     await app.stop();
     config.remove();
     await provider.stop();
-    await redis.stop();
   }
 });

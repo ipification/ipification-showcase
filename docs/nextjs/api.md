@@ -34,7 +34,7 @@ The login UI uses `/auth/prepare` before `/auth/start`; calling the old start UR
 | `POST /ts43/auth`, `/ts43/token` | Start SIM credential request and exchange credential. See [SIM](sim.md). `/ts43/auth` can return 429. |
 | `POST /sms/log`, `/ts43/log` | Diagnostic endpoints; not provider integration steps. Avoid sending sensitive information. |
 | `GET /health/live` | Process liveness. |
-| `GET /health/ready` | Checks runtime configuration and Redis; returns 503 when unavailable. |
+| `GET /health/ready` | Checks runtime configuration; returns 503 when invalid. |
 | `POST /api/play-integrity/attempt`, `/verify`, `/token-exchange` | Optional Play Integrity flow; full paths share `/api/play-integrity`. Disabled endpoints return 404 unless `PLAY_INTEGRITY_ENABLED=true`. See [Play Integrity](../PLAY_INTEGRITY_IPIFICATION_DEMO.md); verify its deployment assumptions against Next.js code. |
 
 For request examples, response behavior and security boundaries, see [Mobile and S2S](mobile-s2s.md).

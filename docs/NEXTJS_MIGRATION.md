@@ -1,3 +1,5 @@
+> Historical migration record: Redis and cross-instance behavior described below were superseded by the single-process memory store. See [current runtime guidance](nextjs/running.md#storage-and-sessions).
+
 # Next.js migration
 
 > Historical reference: the application now lives at the repository root. Use the [current integration guide](nextjs/README.md) for setup and flows.

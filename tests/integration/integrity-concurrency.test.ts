@@ -1,11 +1,6 @@
 import { test, expect } from "vitest";
-import { startRedis } from "../helpers/redis";
-import { closeRedis } from "@/server/store/redis";
 import { createPlayIntegrityAttemptService } from "@/server/integrity/attempts";
 test("shared attempts and transactions are claimed once with fixed TTL", async () => {
-  const redis = await startRedis();
-  process.env.REDIS_URL = redis.url;
-  process.env.SHOWCASE_KEY_PREFIX = "integrity-test:";
   const options = {
     stateSecret: "fixture-state-secret",
     stateIssuer: "fixture-issuer",
@@ -47,7 +42,5 @@ test("shared attempts and transactions are claimed once with fixed TTL", async (
     expect((await b.claimTransaction(state)).status).toBe("unavailable");
     expect((await a.claimTransaction("forged")).status).toBe("invalid");
   } finally {
-    await closeRedis();
-    await redis.stop();
   }
 });

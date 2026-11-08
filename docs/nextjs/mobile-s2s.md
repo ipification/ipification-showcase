@@ -7,7 +7,7 @@ These are **Showcase backend endpoints**, not IPification endpoints or a require
 | You have | Showcase request | Backend behavior |
 | --- | --- | --- |
 | An unused authorization `code` and its redirect URI | `POST /auth/mobile/login` | Exchange the code with IPification and request userinfo. |
-| The `state` of a Showcase browser attempt whose callback has completed | `POST /auth/s2s/signin` | Read previously stored userinfo from Redis; no code exchange. |
+| The `state` of a Showcase browser attempt whose callback has completed | `POST /auth/s2s/signin` | Read previously stored userinfo from the demo memory store; no code exchange. |
 | A desktop browser waiting for a QR attempt | `GET /auth/status?state=...` | Check owner-bound status. See [QR and polling](qr.md). |
 
 ## Mobile: exchange an authorization code
@@ -66,7 +66,7 @@ sequenceDiagram
     participant B as Browser or QR phone
     participant S as Showcase backend
     participant I as IPification
-    participant R as Redis
+    participant R as Demo memory store
     participant C as Calling service
     B->>S: Bound callback with code and state
     S->>I: Token exchange and userinfo
@@ -102,5 +102,5 @@ Unlike `/auth/status`, this handler does not check an owner cookie or authentica
 ## Source and tests
 
 - [Mobile handler](../../src/server/auth/mobile.ts) and [auth service](../../src/server/auth/service.ts).
-- [S2S handler](../../src/app/auth/s2s/signin/route.ts) and [Redis result store](../../src/server/store/auth-results.ts).
+- [S2S handler](../../src/app/auth/s2s/signin/route.ts) and [Demo result store](../../src/server/store/auth-results.ts).
 - [Mobile and S2S contracts](../../tests/contracts/mobile-s2s.test.ts) and [web callback contracts](../../tests/contracts/web-auth.test.ts).
