@@ -85,6 +85,8 @@ export function createAuthService(overrides: Partial<Dependencies> = {}) {
       (input.qr && ["pvn_im", "login_im"].includes(client.user_flow))
     )
       throw new AuthAttemptError("AUTH_STATE_INVALID");
+    // The showcase stores an owner-bound attempt before redirecting; clients can
+    // use their own state/session mechanism instead of copying this demo endpoint.
     const state = ports.id() + (input.qr ? "-qrcode" : "");
     const expiresAt = Date.now() + (input.qr ? QR_SCAN_MS : AUTH_ATTEMPT_MS);
     await ports.attempts.create({
@@ -159,7 +161,8 @@ export function createAuthService(overrides: Partial<Dependencies> = {}) {
     const client = callbackError
       ? undefined
       : resolveClient(context, { flow: input.userFlow });
-    // Claim before any provider call, result write or session adoption.
+    // Validate and claim the bound state before exchanging a code or writing a result.
+    // This also rejects replayed callbacks within the demo process.
     const attempt = await ports.attempts.claimCallback(
       input.state,
       {
@@ -217,7 +220,9 @@ export function createAuthService(overrides: Partial<Dependencies> = {}) {
           redirectUri: `${attempt.origin}/auth/callback/${attempt.userFlow}/${attempt.serverId}`,
           code: input.code,
         }));
-        // 2. Store both result views before marking the attempt terminal for status polling.
+        // 2. These two result views serve the showcase UI and S2S lookup;
+        // they are demo storage choices, not provider API requirements.
+        // Store them before marking the attempt terminal for status polling.
         await ports.results.saveResult(
           attempt.state,
           {

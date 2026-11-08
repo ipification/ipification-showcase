@@ -97,6 +97,7 @@ export async function exchangeCodeAndGetUserInfo(
     )
       grantParameters.set(name, String(value));
   }
+  // 1. Exchange the authorization code at the provider token endpoint.
   const tokenInfo = await providerCall("token", async () => {
     try {
       return await oidc.genericGrantRequest(
@@ -108,10 +109,12 @@ export async function exchangeCodeAndGetUserInfo(
       throw normalizeOidcError(error, true);
     }
   });
+  // 2. Use the returned access token to request provider userinfo.
   const userInfo = await providerCall("userinfo", async () => {
     try {
-      // The existing demo has no validated ID-token subject to compare here.
-      // State/callback binding remains enforced by the calling authentication service.
+      // Demo limitation: no validated ID-token subject is available for comparison.
+      // Browser callbacks bind state separately; clients must implement their own
+      // provider-supported OIDC validation. See docs/integration/browser.md.
       return await oidc.fetchUserInfo(
         config,
         tokenInfo.access_token,

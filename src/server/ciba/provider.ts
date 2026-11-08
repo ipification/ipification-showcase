@@ -49,7 +49,7 @@ export async function sendSmsCode(input: StartInput): Promise<CibaStartResult> {
     channel: "sms",
     message: "Your verification PIN is: {{code}}",
   });
-  // 2. The browser returns this request id when submitting the OTP.
+  // 2. The browser returns this request ID when submitting the OTP; it is not an access token.
   return { authReqId, nonce };
 }
 
@@ -77,7 +77,7 @@ export async function createSimCredentialRequest(
   if (input.carrierHint) form.carrier_hint = input.carrierHint;
   // 1. Start CIBA authentication with the mobile/SIM hints.
   const authReqId = await requestAuthentication(root, form);
-  // 2. Obtain the credential query the browser must pass to its credential API.
+  // 2. Use the request ID to obtain the query passed to the browser credential API.
   const data = await providerCall("dcql", () =>
     postJson(
       root + "/ext/bc/ts43/dcql",
@@ -135,8 +135,9 @@ async function submitCallback(
   try {
     await postJson(url, body, { Authorization: `Bearer ${authReqId}` });
   } catch {
-    // Preserve the provider's best-effort callback step: still attempt /token.
-    // Changing this to fail early would change both SMS and SIM behavior.
+    // Showcase behavior: callback submission is best-effort and /token is still attempted.
+    // Integrators should decide their own error handling; see docs/integration/sms.md
+    // and docs/integration/sim.md.
   }
 }
 
@@ -156,6 +157,7 @@ async function exchangeCibaTokenAndGetUserInfo(
       }),
     ),
   );
+  // CIBA currently sends the token in a form body; the browser OIDC flow uses Bearer.
   return providerCall("userinfo", () =>
     postForm(root + "/userinfo", { access_token: token.access_token }),
   );

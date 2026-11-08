@@ -22,8 +22,10 @@ export function buildAuthorizationUrl({
   phone?: unknown;
   appEnv?: string;
 }) {
-  // These are provider parameters; /auth/prepare and /auth/status belong to this demo.
-  // Keep the callback URI identical when exchanging the authorization code.
+  // Provider authorization parameters: state identifies the prepared attempt;
+  // login_hint carries the phone only for flows that collect one.
+  // The callback URI must be the same when the backend exchanges the code.
+  // /auth/prepare and /auth/status are showcase endpoints, not provider APIs.
   const params: Record<string, unknown> = {
     response_type: "code",
     client_id: client.client_id,
@@ -38,6 +40,7 @@ export function buildAuthorizationUrl({
   };
   if (client.channel) params.channel = client.channel;
   if (phone) params.login_hint = phone;
+  // IP via App uses the IPificator endpoint; other browser flows use the configured server.
   const authorizationEndpoint =
     userFlow === "pvn_ipificator"
       ? "https://ipificator.ipification.com/api"
@@ -60,7 +63,7 @@ export async function exchangeAuthorizationCode({
   code: unknown;
 }) {
   const root = `${server.url}/realms/${realm}/protocol/openid-connect`;
-  // The server exchanges the authorization code, then uses its token for user info.
+  // Exchange the one-use code on the backend; never expose the client secret to the browser.
   return exchangeCodeAndGetUserInfo(root + "/token", root + "/userinfo", {
     code,
     redirect_uri: redirectUri,

@@ -109,7 +109,8 @@ export function useVerification({
     preparation.current = controller;
     setActiveFlow(client.user_flow);
     try {
-      // The backend prepares a short-lived attempt and binds this browser with an HttpOnly cookie.
+      // This showcase endpoint prepares an owner-bound attempt for direct or QR use;
+      // it is not an IPification provider endpoint.
       const response = await fetch("/auth/prepare", {
         method: "POST",
         headers: { "content-type": "application/json" },

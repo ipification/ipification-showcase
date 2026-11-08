@@ -79,7 +79,9 @@ export interface AuthAttemptRepository {
   finishCompletion(state: string, failed?: boolean): Promise<void>;
 }
 
-// Synchronous transitions are atomic within the demo's single Node.js process.
+// Demo-specific state, cookie bindings and QR polling share this process-local store.
+// Synchronous transitions are atomic only within one Node.js process; a multi-instance
+// application needs shared storage with atomic claims and expiry.
 async function transition(
   state: unknown,
   expected: Record<string, unknown>,
@@ -122,6 +124,7 @@ async function transition(
   }
   if (phases.length && !phases.includes(value.status))
     throw new AuthAttemptError("AUTH_STATE_REPLAYED");
+  // A first QR scan starts a new completion window; a replay cannot extend it.
   if (mode === "start" && value.qr)
     changes.expiresAt = Date.now() + AUTH_ATTEMPT_MS;
   Object.assign(value, changes);
