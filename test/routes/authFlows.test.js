@@ -195,8 +195,13 @@ test('callback generates a UUID when state is absent and retains lookup errors',
 test('callback and mobile preserve their distinct provider failure responses', async () => {
   await withAuth(async ({ request, post }) => {
     const callback = await request(`/callback/pvn_ip/stage?code=c&state=${randomUUID()}`);
-    assert.equal(callback.status, 400);
-    assert.equal(await callback.text(), 'Request failed with status code 502');
+    assert.equal(callback.status, 302);
+    assert.equal(callback.headers.get('location'), '/auth/login');
+    const cookie = callback.headers.get('set-cookie').split(';', 1)[0];
+    const login = await request('/login', { headers: { cookie } });
+    assert.match(await login.text(), /provider-failure/);
+    const nextLogin = await request('/login', { headers: { cookie } });
+    assert.doesNotMatch(await nextLogin.text(), /provider-failure/);
     const mobile = await post('/mobile/login', { client_id: 'demo-client', code: 'c', redirect_uri: 'demo://callback' });
     assert.equal(mobile.status, 401);
     assert.deepEqual(await mobile.json(), { error: 'Request failed with status code 502' });
