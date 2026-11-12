@@ -165,10 +165,8 @@ async function callback(req, res) {
     res.redirect(auth_complete_url);
   } catch (err) {
     logger.error('---> get token error:', err.message);
-    if (err.response?.data) {
-      logger.error('Error response data:', err.response.data);
-    }
-    res.status(HTTP_STATUS.BAD_REQUEST).send(err.message);
+    req.session.error_message = err.message;
+    res.redirect('/auth/login');
   }
 }
 

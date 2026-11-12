@@ -171,9 +171,11 @@ test('backchannel takes precedence over QR, stores results and responds with emp
 test('failed second cache write prevents QR notification and success redirect', async () => {
   await withAuth(async ({ request, events, order }) => {
     const response = await request(`/callback/pvn_ip/stage?code=c&state=${randomUUID()}-qrcode`);
-    assert.equal(response.status, 400);
-    assert.equal(await response.text(), 'second write failed');
-    assert.equal(response.headers.get('location'), null);
+    assert.equal(response.status, 302);
+    assert.equal(response.headers.get('location'), '/auth/login');
+    const cookie = response.headers.get('set-cookie').split(';', 1)[0];
+    const login = await request('/login', { headers: { cookie } });
+    assert.match(await login.text(), /second write failed/);
     assert.deepEqual(events, []);
     assert.deepEqual(order, ['result']);
   }, { failSecondWrite: true });
