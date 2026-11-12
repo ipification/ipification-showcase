@@ -117,10 +117,24 @@ async function callback(req, res) {
 
   const redirectUri = `${baseUrl}/auth/callback/${userFlow}/${authServer.id}`;
 
+  let userInfo;
   try {
-    const { userInfo } = await exchangeAuthorizationCode({
+    ({ userInfo } = await exchangeAuthorizationCode({
       server: authServer, realm, clientId, clientSecret, redirectUri, code,
-    });
+    }));
+  } catch (err) {
+    logger.error('---> get token error:', err.message);
+    if (err.response?.data) {
+      logger.error('Error response data:', err.response.data);
+    }
+    const providerError = err.response?.data;
+    req.session.error_message = [providerError?.error_description, providerError?.error]
+      .find(value => typeof value === 'string' && value.trim()) || 'Unable to complete authentication.';
+    res.redirect('/auth/login');
+    return;
+  }
+
+  try {
     logger.log(`state: ${state}`);
     logger.log(`userInfo: ${JSON.stringify(userInfo)}`);
 
@@ -151,10 +165,8 @@ async function callback(req, res) {
     res.redirect(auth_complete_url);
   } catch (err) {
     logger.error('---> get token error:', err.message);
-    if (err.response?.data) {
-      logger.error('Error response data:', err.response.data);
-    }
-    res.status(HTTP_STATUS.BAD_REQUEST).send(err.message);
+    req.session.error_message = err.message;
+    res.redirect('/auth/login');
   }
 }
 
