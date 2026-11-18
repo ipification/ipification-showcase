@@ -1,5 +1,6 @@
 import intlTelInput from "/vendor/intl/js/intlTelInputWithUtils.mjs";
 import qrcode from "/vendor/qrcode/qrcode.mjs";
+import { completionUrlForAttempt } from "./completion-url.js";
 
 const storage = {
   get(key) {
@@ -475,15 +476,13 @@ try {
         disconnected = false;
         if (data.status === "finished") location.assign("/user/info");
         else if (data.status === "completed" || data.status === "failed") {
-          const url = new URL(data.completionUrl, location.origin);
-          if (
-            url.origin === location.origin &&
-            url.pathname === "/auth/complete" &&
-            !url.hash &&
-            url.searchParams.getAll("state").length === 1 &&
-            url.searchParams.get("state") === attempt.state
-          )
-            location.assign(url.href);
+          const url = completionUrlForAttempt(
+            data.completionUrl,
+            location.origin,
+            attempt.state,
+          );
+          if (url) location.assign(url);
+          else throw new Error("Invalid completion URL");
         } else if (
           data.status === "pending" &&
           data.started === true &&

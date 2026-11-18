@@ -1,4 +1,3 @@
-import "server-only";
 import { loadRuntimeConfig } from "../../../runtime/config.mjs";
 import type { AuthServer, PublicClient } from "@/shared/contracts";
 export interface ServerClient extends PublicClient {

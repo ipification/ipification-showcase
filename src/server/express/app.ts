@@ -1,4 +1,5 @@
 import express from "express";
+import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { getConfig } from "@/server/config/load";
 import { toPublicShowcaseConfig } from "@/server/config/public";
@@ -9,29 +10,29 @@ import type {
 } from "express";
 import { toWebRequest, writeWebResponse } from "./http";
 import { userInfo, qrError, authError } from "./pages";
-import { GET as root } from "@/app/route";
-import { GET as live } from "@/app/health/live/route";
-import { GET as ready } from "@/app/health/ready/route";
-import { GET as config } from "@/app/api/config/route";
-import { GET as geoip } from "@/app/api/geoip/route";
-import { GET as start } from "@/app/auth/start/route";
-import { GET as status } from "@/app/auth/status/route";
-import { GET as complete } from "@/app/auth/complete/route";
-import { GET as callback } from "@/app/auth/callback/[userFlow]/[serverId]/route";
-import { GET as loginError } from "@/app/auth/login/error/route";
-import { GET as sessionRequired } from "@/app/auth/session-required/route";
-import { POST as prepare } from "@/app/auth/prepare/route";
-import { POST as mobile } from "@/app/auth/mobile/login/route";
-import { POST as s2s } from "@/app/auth/s2s/signin/route";
-import { POST as smsAuth } from "@/app/sms/auth/route";
-import { POST as smsToken } from "@/app/sms/token/route";
-import { POST as smsLog } from "@/app/sms/log/route";
-import { POST as simAuth } from "@/app/ts43/auth/route";
-import { POST as simToken } from "@/app/ts43/token/route";
-import { POST as simLog } from "@/app/ts43/log/route";
-import { POST as integrityAttempt } from "@/app/api/play-integrity/attempt/route";
-import { POST as integrityVerify } from "@/app/api/play-integrity/verify/route";
-import { POST as integrityToken } from "@/app/api/play-integrity/token-exchange/route";
+import { GET as root } from "@/server/express/routes/route";
+import { GET as live } from "@/server/express/routes/health/live/route";
+import { GET as ready } from "@/server/express/routes/health/ready/route";
+import { GET as config } from "@/server/express/routes/api/config/route";
+import { GET as geoip } from "@/server/express/routes/api/geoip/route";
+import { GET as start } from "@/server/express/routes/auth/start/route";
+import { GET as status } from "@/server/express/routes/auth/status/route";
+import { GET as complete } from "@/server/express/routes/auth/complete/route";
+import { GET as callback } from "@/server/express/routes/auth/callback/[userFlow]/[serverId]/route";
+import { GET as loginError } from "@/server/express/routes/auth/login/error/route";
+import { GET as sessionRequired } from "@/server/express/routes/auth/session-required/route";
+import { POST as prepare } from "@/server/express/routes/auth/prepare/route";
+import { POST as mobile } from "@/server/express/routes/auth/mobile/login/route";
+import { POST as s2s } from "@/server/express/routes/auth/s2s/signin/route";
+import { POST as smsAuth } from "@/server/express/routes/sms/auth/route";
+import { POST as smsToken } from "@/server/express/routes/sms/token/route";
+import { POST as smsLog } from "@/server/express/routes/sms/log/route";
+import { POST as simAuth } from "@/server/express/routes/ts43/auth/route";
+import { POST as simToken } from "@/server/express/routes/ts43/token/route";
+import { POST as simLog } from "@/server/express/routes/ts43/log/route";
+import { POST as integrityAttempt } from "@/server/express/routes/api/play-integrity/attempt/route";
+import { POST as integrityVerify } from "@/server/express/routes/api/play-integrity/verify/route";
+import { POST as integrityToken } from "@/server/express/routes/api/play-integrity/token-exchange/route";
 type Handler = (request: Request) => Response | Promise<Response>;
 function adapt(handler: Handler) {
   return async (req: ExpressRequest, res: ExpressResponse) => {
@@ -46,6 +47,20 @@ export function createApp() {
   const app = express();
   app.disable("x-powered-by");
   app.use((req, res, next) => {
+    const requestId = randomUUID(),
+      started = Date.now();
+    res.setHeader("X-Request-Id", requestId);
+    res.once("finish", () =>
+      console.info(
+        JSON.stringify({
+          requestId,
+          method: req.method,
+          path: (req.originalUrl || "/").split("?")[0],
+          status: res.statusCode,
+          duration: Date.now() - started,
+        }),
+      ),
+    );
     if (!(Number(process.env.TRUST_PROXY_HOPS || 0) > 0))
       for (const name of Object.keys(req.headers))
         if (name.startsWith("x-forwarded-") || name === "forwarded")

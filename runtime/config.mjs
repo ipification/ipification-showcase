@@ -2,7 +2,8 @@ import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import nextEnv from "@next/env";
+import dotenv from "dotenv";
+import dotenvExpand from "dotenv-expand";
 let appRoot =
   process.env.SHOWCASE_APP_ROOT ||
   path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -14,7 +15,18 @@ export function initializeConfigEnvironment({
 } = {}) {
   appRoot = root;
   process.env.SHOWCASE_APP_ROOT = appRoot;
-  nextEnv.loadEnvConfig(appRoot, dev);
+  const mode = dev ? "development" : "production";
+  const environment = { ...process.env };
+  const result = dotenv.config({
+    processEnv: environment,
+    path: [`.env.${mode}.local`, ".env.local", `.env.${mode}`, ".env"].map(
+      (name) => path.join(appRoot, name),
+    ),
+    quiet: true,
+  });
+  dotenvExpand.expand({ parsed: result.parsed || {}, processEnv: environment });
+  for (const [name, value] of Object.entries(environment))
+    if (process.env[name] === undefined) process.env[name] = value;
   process.env.APP_ENV ||= dev ? "development" : "production";
   process.env.NODE_CONFIG_ENV ||= process.env.APP_ENV;
   process.env.SHOWCASE_KEY_PREFIX ||= `showcase-next:${process.env.APP_ENV}:`;

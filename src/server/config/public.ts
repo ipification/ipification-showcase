@@ -1,4 +1,3 @@
-import "server-only";
 import type { ServerConfig } from "./load";
 import type {
   PublicConfig,

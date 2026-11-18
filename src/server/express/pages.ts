@@ -29,7 +29,15 @@ const resultJson = (value: unknown) =>
 const html = (content: string) =>
   `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/css/showcase.css"><title>IPification Showcase</title></head><body>${content}</body></html>`;
 export async function userInfo(req: Request, res: Response) {
-  const session = await readSession(sessionId(toWebRequest(req)));
+  let session;
+  try {
+    session = await readSession(sessionId(toWebRequest(req)));
+  } catch {
+    return res
+      .status(503)
+      .set("Cache-Control", "private, no-store")
+      .send("Service unavailable");
+  }
   if (!session?.isAuthenticated || !session.userData)
     return res.redirect(302, "/");
   const result = session.userData;

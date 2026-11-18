@@ -10,15 +10,7 @@ export async function freePort(): Promise<number> {
 export async function startApp(env: Record<string, string> = {}) {
   const port = env.PORT ? Number(env.PORT) : await freePort();
   let output = "";
-  const args =
-    process.env.SHOWCASE_TEST_EXPRESS === "1"
-      ? [
-          "--conditions=react-server",
-          "--import",
-          "tsx",
-          "src/server/express/index.ts",
-        ]
-      : ["server.mjs"];
+  const args = ["--import", "tsx", "src/server/express/index.ts"];
   const child = spawn(process.execPath, args, {
     env: {
       ...process.env,

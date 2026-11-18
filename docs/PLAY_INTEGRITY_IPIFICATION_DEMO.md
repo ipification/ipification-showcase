@@ -1,6 +1,6 @@
 # Google Play Integrity + IPification — mobile demo
 
-> Historical reference: the application now lives at the repository root. Use the [current integration guide](nextjs/README.md) for setup and flows.
+> See the [integration guide](integration/README.md) for setup and current flows.
 
 This document describes an Android demo that checks Google Play Integrity before starting an IPification authentication.
 
@@ -33,7 +33,7 @@ References: [Standard API guide](https://developer.android.com/google/play/integ
 ```text
 Android app                   Client backend                 Google / IPification
     |                                |                                  |
-    | POST /integrity/attempt        |                                  |
+    | POST /api/play-integrity/attempt        |                                  |
     |------------------------------->| store immutable attempt snapshot |
     |<-------------------------------| attemptId + requestHash           |
     |                                |                                  |
@@ -41,7 +41,7 @@ Android app                   Client backend                 Google / IPificatio
     |--------------------------------------------------------------->Google|
     |<---------------------------------------------------------------Google|
     |                                |                                  |
-    | POST /integrity/verify         |                                  |
+    | POST /api/play-integrity/verify         |                                  |
     |------------------------------->| decode token -------------------> Google
     |                                | validate verdict + snapshot       |
     |<-------------------------------| signed state                      |
@@ -77,7 +77,7 @@ The provider is memory-only. If the app process restarts, prepare it again. If t
 The mobile app starts a new attempt:
 
 ```http
-POST /api/security/integrity/attempt
+POST /api/security/api/play-integrity/attempt
 Content-Type: application/json
 
 {
@@ -142,7 +142,7 @@ Never cache, log, or reuse this token.
 ## 4. Backend: verify the token and issue signed state
 
 ```http
-POST /api/security/integrity/verify
+POST /api/security/api/play-integrity/verify
 Content-Type: application/json
 
 {

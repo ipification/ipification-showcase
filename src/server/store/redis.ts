@@ -1,4 +1,3 @@
-import "server-only";
 import { createClient } from "redis";
 function newClient(url: string) {
   return createClient({

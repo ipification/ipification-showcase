@@ -104,15 +104,7 @@ Object.assign(config, {
   locale: { app: { name: "IPification Showcase" } },
 });
 writeFileSync(path.join(dir, "default.json"), JSON.stringify(config));
-const args =
-  process.env.SHOWCASE_TEST_EXPRESS === "1"
-    ? [
-        "--conditions=react-server",
-        "--import",
-        "tsx",
-        "src/server/express/index.ts",
-      ]
-    : ["server.mjs"];
+const args = ["--import", "tsx", "src/server/express/index.ts"];
 const child = spawn(process.execPath, args, {
   env: {
     ...process.env,

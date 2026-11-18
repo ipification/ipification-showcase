@@ -28,7 +28,7 @@ test("mounted configuration is redacted and geoip retains fallback country", asy
 });
 
 for (const hops of [0, 1]) {
-  test(`actual Next server only trusts forwarded origin and IP with TRUST_PROXY_HOPS=${hops}`, async () => {
+  test(`actual Express server only trusts forwarded origin and IP with TRUST_PROXY_HOPS=${hops}`, async () => {
     const config = configFixture();
     const app = await startApp({
       NODE_CONFIG_DIR: config.dir,

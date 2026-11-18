@@ -11,6 +11,7 @@ it("serves the existing health and root redirect contracts with security headers
     const health = await fetch(`${base}/health/live`);
     expect(await health.json()).toEqual({ status: "live" });
     expect(health.headers.get("cache-control")).toBe("no-store");
+    expect(health.headers.get("x-request-id")).toMatch(/^[0-9a-f-]{36}$/);
     expect(health.headers.get("x-content-type-options")).toBe("nosniff");
     expect(health.headers.get("referrer-policy")).toBe("no-referrer");
     expect(health.headers.get("x-frame-options")).toBe("SAMEORIGIN");

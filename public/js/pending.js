@@ -1,3 +1,4 @@
+import { completionUrlForAttempt } from "./completion-url.js";
 const state = new URLSearchParams(location.search).get("state") || "";
 const message = document.querySelector("#pending-message"),
   retry = document.querySelector("#retry");
@@ -35,19 +36,14 @@ async function check() {
       active = false;
       location.replace("/user/info");
     } else if (["completed", "failed"].includes(data.status)) {
-      const url = new URL(data.completionUrl, location.origin);
-      if (
-        url.origin !== location.origin ||
-        url.pathname !== "/auth/complete" ||
-        url.username ||
-        url.password ||
-        url.hash ||
-        url.searchParams.getAll("state").length !== 1 ||
-        url.searchParams.get("state") !== state
-      )
-        throw new Error("unavailable");
+      const url = completionUrlForAttempt(
+        data.completionUrl,
+        location.origin,
+        state,
+      );
+      if (!url) throw new Error("unavailable");
       active = false;
-      location.replace(url.href);
+      location.replace(url);
     } else if (data.status === "pending") {
       if (data.started && Number.isFinite(data.expiresAt))
         deadline = Math.min(deadline, data.expiresAt);

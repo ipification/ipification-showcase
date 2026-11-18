@@ -3,7 +3,7 @@ import {
   watchAuthStatus,
   completionUrlForAttempt,
   type AuthStatusUpdate,
-} from "@/features/auth/auth-status";
+} from "@/shared/auth-status";
 const state = "12345678-1234-1234-1234-123456789abc";
 const origin = "https://showcase.example";
 const pending = { status: "pending", started: false, expiresAt: 120000 };

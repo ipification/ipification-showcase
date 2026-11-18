@@ -1,6 +1,6 @@
 # IPification Showcase
 
-A Next.js demonstration of IPification phone verification, login and identity flows.
+An Express and vanilla JavaScript demonstration of IPification phone verification, login and identity flows.
 
 ## Start locally
 
@@ -23,4 +23,4 @@ Run with Docker Compose from the repository root after configuring `config/defau
 docker compose up --build
 ```
 
-See the [integration guide](docs/nextjs/README.md) and [local setup and testing](docs/nextjs/running.md). The Playwright tests use a local mock provider and do not verify live stage or carrier behavior.
+See the [integration guide](docs/integration/README.md) and [local setup and testing](docs/integration/running.md). The Playwright tests use a local mock provider and do not verify live stage or carrier behavior.

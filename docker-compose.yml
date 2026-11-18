@@ -1,6 +1,6 @@
 services:
-  showcase-next:
-    image: ipification_showcase_next:local
+  showcase:
+    image: ipification_showcase:local
     build:
       context: .
     restart: unless-stopped
