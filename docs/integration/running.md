@@ -42,4 +42,4 @@ The focused suite covers mobile-width PNV IP/IP+, Login IP/IP+, Anonymous Identi
 
 ## GitHub Actions
 
-The `Showcase Express CI` workflow runs on pushes and pull requests. It installs Node 24.22.0, Redis and Chromium, then runs lint, typecheck, a production build, unit/API tests and the focused Playwright suite above. Failure diagnostics from Playwright are uploaded as a short-lived artifact. The browser fixture starts its own Redis and mock provider; the workflow requires no stage credentials and does not verify live provider or device behavior. The separate process/Redis integration suite is not part of this workflow.
+The `Showcase Express CI` workflow runs on pushes and pull requests. It installs Node 24.22.0, Redis and Chromium, then runs lint, typecheck, a production build, unit/API tests, Redis integration tests and the full Playwright suite. Failure diagnostics from Playwright are uploaded as a short-lived artifact. The browser fixture starts its own Redis and mock provider; the workflow requires no stage credentials and does not verify live provider or device behavior. The Docker-specific smoke test runs only when `TEST_DOCKER_IMAGE` is configured.

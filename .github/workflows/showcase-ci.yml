@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: showcase-next-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: showcase-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -43,15 +43,10 @@ jobs:
         run: npm run build
       - name: Unit and API tests
         run: npm test
-      - name: Playwright main flows
-        run: >-
-          npm run test:e2e --
-          e2e/main-flows.spec.ts
-          e2e/sim-availability.spec.ts
-          e2e/qr.spec.ts
-          e2e/sms.spec.ts
-          e2e/result.spec.ts
-          e2e/auth-error.spec.ts
+      - name: Integration tests
+        run: npm run test:integration
+      - name: Playwright suite
+        run: npm run test:e2e
       - name: Upload Playwright diagnostics
         if: failure()
         uses: actions/upload-artifact@v4

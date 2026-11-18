@@ -163,6 +163,9 @@ test("cancelling a pending SIM credential unlocks retry and an old attempt canno
     .poll(() => page.evaluate(() => (window as any).credentialRequests.length))
     .toBe(1);
   await expect(sim).toHaveAttribute("aria-busy", "true");
+  await expect(
+    page.getByRole("button", { name: "IP", exact: true }),
+  ).toBeDisabled();
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(sim).toBeEnabled();
   await sim.click();
@@ -174,4 +177,31 @@ test("cancelling a pending SIM credential unlocks retry and an old attempt canno
   await expect(sim).toHaveAttribute("aria-busy", "true");
   await page.evaluate(() => (window as any).credentialRequests[1](null));
   await expect(sim).toBeEnabled();
+});
+test("a pending IP preparation prevents starting SIM concurrently", async ({
+  page,
+}) => {
+  await page.addInitScript(() =>
+    Object.defineProperty(window, "DigitalCredential", {
+      configurable: true,
+      value: { userAgentAllowsProtocol: () => true },
+    }),
+  );
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/auth/prepare", async (route) => {
+    await held;
+    await route.continue().catch(() => {});
+  });
+  try {
+    await page.goto("/auth/login#login");
+    await page.getByRole("button", { name: "IP", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: "SIM", exact: true }),
+    ).toBeDisabled();
+  } finally {
+    release();
+  }
 });

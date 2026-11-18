@@ -98,3 +98,34 @@ test("phone input has no surrounding outline for pointer entry and retains keybo
   await expect(phone).toHaveCSS("outline-style", "solid");
   await expect(phone).toHaveCSS("outline-width", "2px");
 });
+test("GeoIP fallback and configured country lock are respected", async ({
+  page,
+}) => {
+  await page.route("**/api/showcase-config", async (route) => {
+    const response = await route.fetch();
+    const config = await response.json();
+    delete config.defaultCountry;
+    config.disabledSelectCountry = true;
+    await route.fulfill({ response, json: config });
+  });
+  await page.route("**/api/geoip", (route) =>
+    route.fulfill({ json: { country: "vn", ip: "127.0.0.1" } }),
+  );
+  await page.goto("/auth/login#pnv");
+  await expect(page.getByLabel("Phone number", { exact: true })).toBeVisible();
+  await expect(page.locator(".iti__selected-dial-code")).toHaveText("+84");
+  await expect(
+    page.getByRole("button", { name: /Change country for phone number/ }),
+  ).toHaveCount(0);
+  await page.route("https://www.ipification.com/consents/**", (route) =>
+    route.abort(),
+  );
+  await page.getByRole("button", { name: /Viettel/ }).click();
+  const consent = page.getByRole("dialog", { name: "Viettel consent" });
+  await expect(consent).toBeVisible();
+  await expect(consent.locator("iframe")).toHaveAttribute(
+    "src",
+    /vn-viettel-001-vi/,
+  );
+  await consent.getByRole("button", { name: "Close" }).click();
+});

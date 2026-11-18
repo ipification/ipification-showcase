@@ -56,6 +56,19 @@ try {
   const response = await fetch("/api/showcase-config", { cache: "no-store" });
   if (!response.ok) throw new Error("Unable to load showcase configuration");
   const config = await response.json();
+  let defaultCountry = config.defaultCountry || "rs";
+  if (!config.defaultCountry && config.appEnv !== "stage") {
+    try {
+      const geo = await fetch("/api/geoip");
+      if (geo.ok) defaultCountry = (await geo.json()).country || defaultCountry;
+    } catch {}
+  }
+  document.title = config.title || "IPification Showcase";
+  const favicon = document.createElement("link");
+  favicon.rel = "icon";
+  favicon.href = config.faviconUrl || "/images/logo.ico";
+  document.head.append(favicon);
+  const countryNames = new Intl.DisplayNames(["en"], { type: "region" });
   const tabs = Object.keys(groups).filter((tab) =>
     groups[tab].some((flow) =>
       config.clients.some((client) => client.user_flow === flow),
@@ -77,7 +90,8 @@ try {
     iti,
     keyboardNavigation = false,
     activeSim = null,
-    activePreparation = null;
+    activePreparation = null,
+    activeFlow = null;
   document.addEventListener("keydown", (event) => {
     if (
       event.key !== "Tab" &&
@@ -96,6 +110,7 @@ try {
     container.closest(".legacy-showcase").dataset.keyboardNavigation = "false";
   });
   function render() {
+    activeFlow = null;
     if (activePreparation) {
       activePreparation.abort();
       activePreparation = null;
@@ -106,6 +121,7 @@ try {
     }
     container.closest(".legacy-showcase").dataset.tab = tab;
     iti?.destroy();
+    iti = undefined;
     phone = "";
     valid = false;
     const section = config.locale.sections[tab];
@@ -139,7 +155,7 @@ try {
             .getAllCountries()
             .map(
               (c) =>
-                `<option value="${esc(c.iso2)}">${esc(c.name)} (+${esc(c.dialCode)})</option>`,
+                `<option value="${esc(c.iso2)}">${esc(countryNames.of(c.iso2.toUpperCase()) || c.iso2)} (+${esc(c.dialCode)})</option>`,
             )
             .join("")}</select>`
         : ""
@@ -153,7 +169,7 @@ try {
               "",
             )}</div>${methods.some(needsPhone) ? phoneBox + `<div class="legacy-methods">${methods.filter(needsPhone).map(button).join("")}</div>` : ""}`
         : `${tab !== "login" ? phoneBox : ""}<div class="legacy-methods">${methods.map(button).join("")}</div>`;
-    container.innerHTML = `<div class="legacy-shell"><header class="legacy-header"><a href="/auth/login" class="legacy-brand"><img class="legacy-brand-logo" width="326" height="70" src="${esc(config.logoUrl || "/images/logo/ipification-horizontal-black.svg")}" alt="${esc(config.locale.app.name)}"></a>${config.auth_servers.length > 1 ? `<div class="legacy-site"><span>Site</span><button id="site" type="button" role="combobox" aria-label="Authentication server" aria-expanded="false">${esc(server)}</button><div id="site-list" role="listbox" hidden>${config.auth_servers.map((s) => `<button type="button" role="option" data-server="${esc(s.id)}">${esc(s.id)}</button>`).join("")}</div></div>` : ""}</header><main class="legacy-main" aria-busy="false"><h1 class="sr-only">${esc(config.locale.app.name)}</h1><div role="tablist" aria-label="Authentication options" class="legacy-tabs" data-slot="tabs-list" style="grid-template-columns:repeat(${tabs.length},1fr)">${tabs.map((t) => `<button role="tab" data-slot="tabs-trigger" type="button" data-tab="${esc(t)}" data-state="${t === tab ? "active" : "inactive"}" aria-selected="${t === tab}">${esc(config.locale.tabs[t])}</button>`).join("")}</div><div class="legacy-section"><h2 class="legacy-section-title">${esc(section?.title)}</h2><p class="legacy-description">${esc(section?.description)}</p>${body}<p role="alert" class="legacy-inline-error" id="flow-error" hidden></p></div></main><footer class="legacy-footer"><div class="legacy-footer-links"><a href="https://www.ipification.com/legal">${esc(config.locale.footer.privacy_policy)}</a><button type="button" id="about">${esc(config.locale.footer.about)}</button><a href="https://www.ipification.com/media/IPification%20-%20Showcase%20Guide%202.2.pdf">${esc(config.locale.footer.help)}</a></div></footer></div>`;
+    container.innerHTML = `<div class="legacy-shell"><header class="legacy-header"><a href="/auth/login" class="legacy-brand"><img class="legacy-brand-logo" width="326" height="70" src="${esc(config.logoUrl || "/images/logo/ipification-horizontal-black.svg")}" alt="${esc(config.locale.app.name)}"></a>${config.auth_servers.length > 1 ? `<div class="legacy-site"><span>Site</span><button id="site" type="button" role="combobox" aria-label="Authentication server" aria-expanded="false">${esc(server)}</button><div id="site-list" role="listbox" hidden>${config.auth_servers.map((s) => `<button type="button" role="option" data-server="${esc(s.id)}">${esc(s.id)}</button>`).join("")}</div></div>` : ""}</header><main class="legacy-main" aria-busy="false"><h1 class="sr-only">${esc(config.locale.app.name)}</h1><div role="tablist" aria-label="Authentication options" class="legacy-tabs" data-slot="tabs-list" style="grid-template-columns:repeat(${tabs.length},1fr)">${tabs.map((t) => `<button role="tab" data-slot="tabs-trigger" type="button" data-tab="${esc(t)}" data-state="${t === tab ? "active" : "inactive"}" aria-selected="${t === tab}">${esc(config.locale.tabs[t])}</button>`).join("")}</div><div class="legacy-section"><h2 class="legacy-section-title">${esc(section?.title)}</h2><p class="legacy-description">${esc(section?.description)}</p>${body}<p role="alert" class="legacy-inline-error" id="flow-error" hidden></p></div></main><footer class="legacy-footer"><div class="legacy-footer-links"><a href="https://www.ipification.com/legal" target="_blank" rel="noreferrer">${esc(config.locale.footer.privacy_policy)}</a><button type="button" id="about">${esc(config.locale.footer.about)}</button><a href="https://www.ipification.com/media/IPification%20-%20Showcase%20Guide%202.2.pdf" target="_blank" rel="noreferrer">${esc(config.locale.footer.help)}</a></div></footer></div>`;
     container.querySelectorAll('[role="tab"]').forEach((el) =>
       el.addEventListener("click", () => {
         tab = el.dataset.tab;
@@ -177,6 +193,40 @@ try {
         container.querySelector("#site-list").hidden = true;
       }),
     );
+    const logo = container.querySelector(".legacy-brand-logo");
+    if (config.logoUrl && config.logoStyle)
+      logo.style.cssText = config.logoStyle;
+    function updateConsent(country) {
+      container.querySelector(".legacy-legal")?.remove();
+      if (country !== "vn") return;
+      const legal = document.createElement("p");
+      legal.className = "legacy-legal";
+      legal.append(
+        document.createTextNode(config.locale.footer.viettel_legal + " "),
+      );
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = config.locale.footer.viettel;
+      button.style.textDecoration = "underline";
+      button.onclick = () => {
+        const dialog = document.createElement("dialog");
+        dialog.className = "legacy-dialog legacy-consent-dialog";
+        dialog.dataset.slot = "dialog-content";
+        dialog.setAttribute("aria-label", "Viettel consent");
+        dialog.innerHTML =
+          '<h2>Viettel consent</h2><iframe title="Viettel consent" src="https://www.ipification.com/consents/vn-viettel-001-vi.html" style="width:100%;height:60vh"></iframe><button type="button" data-slot="dialog-close" aria-label="Close">×</button>';
+        dialog.querySelector("button").onclick = () => dialog.close();
+        dialog.onclose = () => dialog.remove();
+        document.body.append(dialog);
+        dialog.showModal();
+      };
+      legal.append(
+        button,
+        document.createTextNode(" in case you are Viettel subscribers."),
+      );
+      container.querySelector(".legacy-footer").prepend(legal);
+    }
+    updateConsent(config.appEnv === "stage" ? "ww" : defaultCountry);
     const input = container.querySelector("#showcase-phone");
     container.closest(".legacy-showcase").dataset.keyboardNavigation =
       String(keyboardNavigation);
@@ -219,16 +269,19 @@ try {
           valid = iti ? !!iti.isValidNumber() : !!input.value;
           container
             .querySelectorAll(".legacy-method-phone")
-            .forEach((el) => (el.disabled = !input.value));
+            .forEach((el) => (el.disabled = !!activeFlow || !input.value));
         });
       } else
         iti = intlTelInput(input, {
-          initialCountry: config.defaultCountry || "rs",
+          initialCountry: defaultCountry,
+          countrySelectorMode: config.disabledSelectCountry ? "OFF" : "AUTO",
+          countrySearch: !config.disabledSelectCountry,
           separateDialCode: true,
           strictMode: false,
           formatAsYouType: false,
         });
       const update = () => {
+        updateConsent(iti.getSelectedCountry()?.iso2);
         input.value = input.value.replace(/\D/g, "");
         phone = input.value
           ? (
@@ -253,7 +306,7 @@ try {
                 : "Enter a phone number to enable verification methods.";
         container
           .querySelectorAll(".legacy-method-phone")
-          .forEach((el) => (el.disabled = !input.value));
+          .forEach((el) => (el.disabled = !!activeFlow || !input.value));
       };
       if (config.appEnv !== "stage") {
         input.addEventListener("blur", () => {
@@ -267,6 +320,7 @@ try {
         .querySelector("#stage-country")
         ?.addEventListener("change", (event) => {
           const country = event.target.value;
+          updateConsent(country);
           const wrap = input.parentElement;
           iti?.destroy();
           iti = undefined;
@@ -320,25 +374,37 @@ try {
       dialog.showModal();
     });
   }
+  function endFlow(token) {
+    if (!token || activeFlow !== token) return;
+    activeFlow = null;
+    container.querySelectorAll(".legacy-method").forEach((button) => {
+      button.disabled = needsPhone(button.id) && !phone;
+      button.setAttribute("aria-busy", "false");
+    });
+  }
   async function start(client) {
+    if (activeFlow) return;
     if (needsPhone(client.user_flow) && !valid) {
       const error = container.querySelector("#flow-error");
       error.hidden = false;
       error.textContent = config.locale.modals.phone_invalid;
       return;
     }
-    if (client.user_flow === "pvn_sms") return showSms(client);
+    const token = {};
+    activeFlow = token;
+    container.querySelectorAll(".legacy-method").forEach((button) => {
+      button.disabled = true;
+      button.setAttribute("aria-busy", String(button.id === client.user_flow));
+    });
+    if (client.user_flow === "pvn_sms") return showSms(client, token);
     if (client.user_flow === "pvn_sim" || client.user_flow === "login_sim")
-      return startSim(client);
+      return startSim(client, token);
     const mobile =
       innerWidth <= 768 || /Android|iPhone|Mobile/i.test(navigator.userAgent);
     const qr = !mobile && !client.user_flow.endsWith("_im");
     if (activePreparation) return;
     const controller = new AbortController();
     activePreparation = controller;
-    const trigger = container.querySelector(`#${client.user_flow}`);
-    trigger.disabled = true;
-    trigger.setAttribute("aria-busy", "true");
     try {
       const result = await fetch("/auth/prepare", {
         method: "POST",
@@ -355,24 +421,24 @@ try {
       const attempt = await result.json();
       if (controller.signal.aborted || activePreparation !== controller) return;
       if (!qr) location.assign(attempt.url);
-      else showQr(attempt, client);
+      else showQr(attempt, client, token);
     } catch {
       if (!controller.signal.aborted) {
         const error = container.querySelector("#flow-error");
         error.hidden = false;
         error.textContent = "Unable to open verification. Please try again.";
+        endFlow(token);
       }
     } finally {
       if (activePreparation === controller) {
         activePreparation = null;
-        trigger.disabled = false;
-        trigger.setAttribute("aria-busy", "false");
       }
     }
   }
   render();
   container.hidden = false;
   document.querySelector(".legacy-loading").remove();
+  window.addEventListener("pageshow", () => endFlow(activeFlow));
   window.addEventListener("resize", () => {
     const el = container.querySelector("#pvn_ipificator");
     if (el)
@@ -408,7 +474,7 @@ try {
     })
     .catch(() => {});
 
-  function showQr(attempt, client) {
+  function showQr(attempt, client, token) {
     const dialog = document.createElement("dialog");
     dialog.className = "legacy-dialog legacy-qr-dialog";
     dialog.tabIndex = -1;
@@ -423,7 +489,8 @@ try {
       started = false,
       disconnected = false,
       active = true,
-      busy = false;
+      busy = false,
+      requestController;
     const code = qrcode(0, "L");
     code.addData(attempt.url);
     code.make();
@@ -435,6 +502,7 @@ try {
         caption.innerHTML =
           '<p>Create a new code to restart verification.</p><button class="legacy-action" type="button">Create new QR code</button>';
         caption.querySelector("button").onclick = () => {
+          endFlow(token);
           dialog.close();
           void start(client);
         };
@@ -446,6 +514,7 @@ try {
         caption.innerHTML =
           '<p>Unable to receive verification updates.</p><button class="legacy-action" type="button">Create new QR code</button>';
         caption.querySelector("button").onclick = () => {
+          endFlow(token);
           dialog.close();
           void start(client);
         };
@@ -465,13 +534,22 @@ try {
     async function poll() {
       if (!active || busy) return;
       busy = true;
+      const controller = new AbortController();
+      requestController = controller;
+      const timeout = setTimeout(() => controller.abort(), 5000);
       try {
         const r = await fetch(
           `/auth/status?${new URLSearchParams({ state: attempt.state })}`,
-          { cache: "no-store" },
+          { cache: "no-store", signal: controller.signal },
         );
         const data = await r.json();
         if (!active) return;
+        if (!r.ok && [400, 401, 403].includes(r.status)) {
+          deadline = 0;
+          draw();
+          clearInterval(polling);
+          return;
+        }
         if (!r.ok) throw new Error("unavailable");
         disconnected = false;
         if (data.status === "finished") location.assign("/user/info");
@@ -491,6 +569,12 @@ try {
           started = true;
           deadline = Math.min(data.expiresAt, attempt.expiresAt + 300000);
           draw();
+        } else if (
+          data.status !== "pending" ||
+          typeof data.started !== "boolean" ||
+          !Number.isFinite(data.expiresAt)
+        ) {
+          throw new Error("unavailable");
         }
       } catch {
         if (active) {
@@ -498,6 +582,8 @@ try {
           draw();
         }
       } finally {
+        clearTimeout(timeout);
+        if (requestController === controller) requestController = undefined;
         busy = false;
       }
     }
@@ -512,6 +598,8 @@ try {
     };
     dialog.addEventListener("close", () => {
       active = false;
+      requestController?.abort();
+      endFlow(token);
       clearInterval(timer);
       clearInterval(polling);
       dialog.remove();
@@ -536,7 +624,7 @@ try {
       : await response.text();
     return { response, data };
   }
-  function showSms(client) {
+  function showSms(client, token) {
     const dialog = document.createElement("dialog"),
       controller = new AbortController();
     dialog.className = "legacy-dialog legacy-sms-dialog";
@@ -548,21 +636,29 @@ try {
       error = dialog.querySelector('[role="alert"]'),
       status = dialog.querySelector('[role="status"]'),
       submit = dialog.querySelector('[type="submit"]');
-    let auth;
+    let auth,
+      inFlight = false;
     dialog.querySelector('[type="button"]').onclick = () => {
       controller.abort();
+      endFlow(token);
       dialog.close();
     };
-    dialog.addEventListener("cancel", () => controller.abort());
+    dialog.addEventListener("cancel", () => {
+      controller.abort();
+      endFlow(token);
+    });
     dialog.addEventListener("close", () => {
       controller.abort();
+      endFlow(token);
       dialog.remove();
     });
     input.oninput = () => {
       input.value = input.value.replace(/\D/g, "");
-      submit.disabled = !input.value;
+      submit.disabled = inFlight || !input.value;
     };
     async function verify(code) {
+      if (inFlight || !auth || !code) return;
+      inFlight = true;
       submit.disabled = true;
       error.hidden = true;
       try {
@@ -587,8 +683,10 @@ try {
         if (!controller.signal.aborted) {
           error.textContent = e.message;
           error.hidden = false;
-          submit.disabled = false;
         }
+      } finally {
+        inFlight = false;
+        if (!controller.signal.aborted) submit.disabled = !input.value;
       }
     }
     form.onsubmit = (event) => {
@@ -640,7 +738,7 @@ try {
     dialog.querySelector("[data-retry]").onclick = sendCode;
     void sendCode();
   }
-  async function startSim(client) {
+  async function startSim(client, token) {
     if (activeSim) return;
     const login = client.user_flow === "login_sim",
       alert = container.querySelector("#flow-error"),
@@ -658,8 +756,7 @@ try {
     function release() {
       if (activeSim !== attempt) return;
       activeSim = null;
-      button.disabled = false;
-      button.setAttribute("aria-busy", "false");
+      endFlow(token);
       pending.remove();
     }
     pending.querySelector("button").onclick = () => {

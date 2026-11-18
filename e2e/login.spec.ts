@@ -105,3 +105,31 @@ test("initial tab prefers hash over saved preference", async ({ page }) => {
     page.getByRole("tab", { name: "Identity", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
 });
+test("configured title, favicon and logo styling are reflected in the page", async ({
+  page,
+}) => {
+  await page.route("**/api/showcase-config", async (route) => {
+    const response = await route.fetch();
+    const config = await response.json();
+    Object.assign(config, {
+      title: "Custom Showcase",
+      faviconUrl: "/images/logo.ico",
+      logoUrl: "/images/logo/ipification-horizontal-black.svg",
+      logoStyle: "max-width: 123px",
+    });
+    await route.fulfill({ response, json: config });
+  });
+  await page.goto("/auth/login");
+  await expect(page).toHaveTitle("Custom Showcase");
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute(
+    "href",
+    "/images/logo.ico",
+  );
+  await expect(page.locator(".legacy-brand-logo")).toHaveCSS(
+    "max-width",
+    "123px",
+  );
+  await expect(
+    page.getByRole("link", { name: "Privacy Policy" }),
+  ).toHaveAttribute("target", "_blank");
+});

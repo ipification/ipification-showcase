@@ -101,3 +101,27 @@ test("inline stage country picker still switches between Wonderland and a real c
     await redis.stop();
   }
 });
+test("stage country names and Wonderland reset remain correct after changing tabs", async ({
+  page,
+}) => {
+  await page.route("**/api/showcase-config", async (route) => {
+    const response = await route.fetch();
+    const config = await response.json();
+    config.appEnv = "stage";
+    config.disabledSelectCountry = false;
+    await route.fulfill({ response, json: config });
+  });
+  await page.goto("/auth/login#pnv");
+  const country = page.getByLabel("Country", { exact: true });
+  await expect(country.locator('option[value="us"]')).toContainText(
+    "United States",
+  );
+  await country.selectOption("us");
+  await page.getByRole("tab", { name: "Login", exact: true }).click();
+  await page.getByRole("tab", { name: "PNV", exact: true }).click();
+  await page.getByLabel("Phone number", { exact: true }).fill("123456789");
+  await expect(
+    page.getByRole("button", { name: "IP", exact: true }),
+  ).toBeEnabled();
+  await expect(page.locator(".legacy-stage-phone")).toContainText("+999");
+});

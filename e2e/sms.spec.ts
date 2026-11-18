@@ -84,3 +84,31 @@ test("failed SMS start can be retried without closing the dialog", async ({
   await dialog.getByRole("button", { name: "Retry", exact: true }).click();
   await expect(dialog.getByLabel("OTP code", { exact: true })).toBeEnabled();
 });
+test("editing an OTP during verification cannot start a second token exchange", async ({
+  page,
+}) => {
+  let requests = 0;
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/sms/token", async (route) => {
+    requests++;
+    await held;
+    await route.continue();
+  });
+  await page.goto("/auth/login#pnv");
+  await page.getByLabel("Phone number", { exact: true }).fill("2025550123");
+  await page.getByRole("button", { name: "SMS", exact: true }).click();
+  const dialog = page.getByRole("dialog"),
+    otp = dialog.getByLabel("OTP code", { exact: true });
+  await otp.fill("123456");
+  await dialog.getByRole("button", { name: "Verify", exact: true }).click();
+  await expect.poll(() => requests).toBe(1);
+  await otp.fill("654321");
+  await expect(
+    dialog.getByRole("button", { name: "Verify", exact: true }),
+  ).toBeDisabled();
+  expect(requests).toBe(1);
+  release();
+});

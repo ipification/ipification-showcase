@@ -207,3 +207,28 @@ test("QR close has no initial focus ring and remains accessible with the keyboar
   await page.keyboard.press("Enter");
   await expect(dialog).not.toBeVisible();
 });
+test("QR status polling retries when a status request hangs", async ({
+  page,
+}) => {
+  let requests = 0;
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/auth/status?**", async (route) => {
+    requests++;
+    if (requests === 1) {
+      await held;
+      await route.abort().catch(() => {});
+    } else await route.continue();
+  });
+  try {
+    await page.goto("/auth/login#login");
+    await page.getByRole("button", { name: "IP", exact: true }).click();
+    await expect
+      .poll(() => requests, { timeout: 10000 })
+      .toBeGreaterThanOrEqual(2);
+  } finally {
+    release();
+  }
+});
