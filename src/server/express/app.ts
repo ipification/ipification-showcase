@@ -1,4 +1,8 @@
 import express from "express";
+import path from "node:path";
+import { getConfig } from "@/server/config/load";
+import { toPublicShowcaseConfig } from "@/server/config/public";
+import { resolveContext } from "@/server/http/context";
 import type {
   Request as ExpressRequest,
   Response as ExpressResponse,
@@ -88,6 +92,40 @@ export function createApp() {
         }),
       }),
     )(req, res),
+  );
+  app.get("/api/showcase-config", (req, res) => {
+    try {
+      const request = toWebRequest(req);
+      res
+        .set("Cache-Control", "private, no-store")
+        .json(
+          toPublicShowcaseConfig(getConfig(), resolveContext(request).origin),
+        );
+    } catch {
+      res.status(503).json({ error: "SERVICE_UNAVAILABLE" });
+    }
+  });
+  app.get("/auth/pending", (_req, res) =>
+    res.sendFile(path.resolve("public/pending.html")),
+  );
+  app.get("/auth/login", (_req, res) =>
+    res.sendFile(path.resolve("public/login.html")),
+  );
+  app.use(
+    "/vendor/qrcode",
+    express.static(path.resolve("node_modules/qrcode-generator/dist")),
+  );
+  app.use(
+    "/vendor/intl",
+    express.static(path.resolve("node_modules/intl-tel-input/dist")),
+  );
+  app.use(express.static(path.resolve("public")));
+  app.get("/auth/qrcode/complete", (_req, res) =>
+    res
+      .type("html")
+      .send(
+        `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/css/showcase.css"></head><body><main class="legacy-status-page"><div class="legacy-status-message"><h1>Success</h1><p>You've been authenticated</p><span class="legacy-status-success" aria-hidden="true"></span></div></main></body></html>`,
+      ),
   );
   app.get("/auth/error", authError);
   app.get("/user/info", userInfo);

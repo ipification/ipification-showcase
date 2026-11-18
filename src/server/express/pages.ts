@@ -10,6 +10,22 @@ const escapeHtml = (value: unknown) =>
         c
       ]!,
   );
+const resultJson = (value: unknown) =>
+  (JSON.stringify(value, null, 2) || "")
+    .split(
+      /("(?:\\.|[^"\\])*"\s*:|"(?:\\.|[^"\\])*"|\b(?:true|false|null)\b|-?\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b)/g,
+    )
+    .map((token) => {
+      const css = /^".*:\s*$/.test(token)
+        ? "legacy-json-key"
+        : /^(?:true|false|null|-?\d)/.test(token)
+          ? "legacy-json-value"
+          : "";
+      return css
+        ? `<span class="${css}">${escapeHtml(token)}</span>`
+        : escapeHtml(token);
+    })
+    .join("");
 const html = (content: string) =>
   `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/css/showcase.css"><title>IPification Showcase</title></head><body>${content}</body></html>`;
 export async function userInfo(req: Request, res: Response) {
@@ -26,7 +42,7 @@ export async function userInfo(req: Request, res: Response) {
   res.set("Cache-Control", "private, no-store");
   return res.send(
     html(
-      `<div class="legacy-result-page"><main class="legacy-result"><header><h1>${escapeHtml(result.client_title)}</h1><a href="/" class="legacy-result-close" aria-label="Back to Showcase">×</a></header><section aria-label="Userinfo"><pre class="legacy-result-json">${escapeHtml(JSON.stringify(result.userInfo, null, 2))}</pre></section>${explanation}<footer><div>client id: ${escapeHtml(result.client_id)}</div><div>state: ${escapeHtml(result.state)}</div></footer></main></div>`,
+      `<div class="legacy-result-page"><main class="legacy-result"><header><h1>${escapeHtml(result.client_title)}</h1><a href="/" class="legacy-result-close" aria-label="Back to Showcase">×</a></header><section aria-label="Userinfo"><button type="button" id="copy-json">Copy JSON</button><span role="status" id="copy-status"></span><pre class="legacy-result-json">${resultJson(result.userInfo)}</pre></section>${explanation}<footer><div>client id: ${escapeHtml(result.client_id)}</div><div>state: ${escapeHtml(result.state)}</div></footer></main></div><script type="module" src="/js/result.js"></script>`,
     ),
   );
 }
@@ -65,7 +81,7 @@ export async function authError(req: Request, res: Response) {
   res.set("Cache-Control", "private, no-store");
   return res.send(
     html(
-      `<main class="legacy-error-page"><article><p>IPification Showcase</p><h1>${escapeHtml(failure.title)}</h1><p>${escapeHtml(failure.description)}</p><h2>What you can do</h2><p>${escapeHtml(failure.action)}</p><details><summary>Error details</summary><dl><dt>Error code</dt><dd>${escapeHtml(reason)}</dd>${stage ? `<dt>Step</dt><dd>${escapeHtml(stage)}</dd>` : ""}${status ? `<dt>Provider HTTP status</dt><dd>${escapeHtml(status)}</dd>` : ""}${provider ? `<dt>Provider error</dt><dd>${escapeHtml(provider)}</dd>` : ""}</dl></details>${reference ? `<p>Support reference: ${escapeHtml(reference)}</p>` : ""}<a href="/auth/login">Try again</a></article></main>`,
+      `<main class="legacy-error-page"><article><div class="error-icon" aria-hidden="true">ⓘ</div><p class="error-brand">IPification Showcase</p><h1>${escapeHtml(failure.title)}</h1><p>${escapeHtml(failure.description)}</p><div class="error-advice"><h2>What you can do</h2><p>${escapeHtml(failure.action)}</p></div><details><summary>Error details</summary><dl><dt>Error code</dt><dd>${escapeHtml(reason)}</dd>${stage ? `<dt>Step</dt><dd>${escapeHtml(stage)}</dd>` : ""}${status ? `<dt>Provider HTTP status</dt><dd>${escapeHtml(status)}</dd>` : ""}${provider ? `<dt>Provider error</dt><dd>${escapeHtml(provider)}</dd>` : ""}</dl></details>${reference ? `<p class="error-reference">Support reference: ${escapeHtml(reference)}</p>` : ""}<a class="error-return" href="/auth/login"><span aria-hidden="true">← &nbsp;</span>Try again</a></article></main>`,
     ),
   );
 }

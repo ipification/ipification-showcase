@@ -61,3 +61,26 @@ test("wrong OTP remains retryable without leaving the dialog", async ({
   ).toContainText("Incorrect OTP");
   await expect(page.getByRole("dialog")).toBeVisible();
 });
+test("failed SMS start can be retried without closing the dialog", async ({
+  page,
+}) => {
+  let calls = 0;
+  await page.route("**/sms/auth", async (route) => {
+    calls++;
+    if (calls === 1)
+      await route.fulfill({
+        status: 503,
+        json: { error: "temporarily unavailable" },
+      });
+    else await route.continue();
+  });
+  await page.goto("/auth/login#pnv");
+  await page.getByLabel("Phone number", { exact: true }).fill("2025550123");
+  await page.getByRole("button", { name: "SMS", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("alert")).toContainText(
+    "temporarily unavailable",
+  );
+  await dialog.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(dialog.getByLabel("OTP code", { exact: true })).toBeEnabled();
+});
