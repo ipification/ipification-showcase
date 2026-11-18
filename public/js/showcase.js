@@ -1,6 +1,7 @@
 import intlTelInput from "/vendor/intl/js/intlTelInputWithUtils.mjs";
-import qrcode from "/vendor/qrcode/qrcode.mjs";
-import { completionUrlForAttempt } from "./completion-url.js";
+import { showQr } from "./qr.js";
+import { showSms } from "./sms.js";
+import { startSim } from "./sim.js";
 
 const storage = {
   get(key) {
@@ -396,9 +397,20 @@ try {
       button.disabled = true;
       button.setAttribute("aria-busy", String(button.id === client.user_flow));
     });
-    if (client.user_flow === "pvn_sms") return showSms(client, token);
+    if (client.user_flow === "pvn_sms")
+      return showSms(client, token, { phone, server, endFlow, jsonPost });
     if (client.user_flow === "pvn_sim" || client.user_flow === "login_sim")
-      return startSim(client, token);
+      return startSim(client, token, {
+        getActiveSim: () => activeSim,
+        setActiveSim: (value) => {
+          activeSim = value;
+        },
+        server,
+        phone,
+        container,
+        endFlow,
+        jsonPost,
+      });
     const mobile =
       innerWidth <= 768 || /Android|iPhone|Mobile/i.test(navigator.userAgent);
     const qr = !mobile && !client.user_flow.endsWith("_im");
@@ -421,7 +433,7 @@ try {
       const attempt = await result.json();
       if (controller.signal.aborted || activePreparation !== controller) return;
       if (!qr) location.assign(attempt.url);
-      else showQr(attempt, client, token);
+      else showQr(attempt, client, token, { start, endFlow });
     } catch {
       if (!controller.signal.aborted) {
         const error = container.querySelector("#flow-error");
@@ -474,143 +486,6 @@ try {
     })
     .catch(() => {});
 
-  function showQr(attempt, client, token) {
-    const dialog = document.createElement("dialog");
-    dialog.className = "legacy-dialog legacy-qr-dialog";
-    dialog.tabIndex = -1;
-    dialog.dataset.slot = "dialog-content";
-    dialog.setAttribute("aria-label", client.title || "Verify your identity");
-    dialog.innerHTML = `<header data-slot="dialog-header"><h2 data-slot="dialog-title"></h2></header><div class="legacy-qr-content"></div><div class="legacy-qr-caption"></div><button type="button" data-slot="dialog-close" aria-label="Close">×</button>`;
-    dialog.querySelector("h2").textContent =
-      client.title || "Verify your identity";
-    const content = dialog.querySelector(".legacy-qr-content"),
-      caption = dialog.querySelector(".legacy-qr-caption");
-    let deadline = attempt.expiresAt,
-      started = false,
-      disconnected = false,
-      active = true,
-      busy = false,
-      requestController;
-    const code = qrcode(0, "L");
-    code.addData(attempt.url);
-    code.make();
-    function draw() {
-      const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
-      if (!left) {
-        content.innerHTML =
-          '<div class="legacy-qr-recovery"><strong>QR code expired</strong><p>This verification link has expired. Create a new QR code to continue.</p></div>';
-        caption.innerHTML =
-          '<p>Create a new code to restart verification.</p><button class="legacy-action" type="button">Create new QR code</button>';
-        caption.querySelector("button").onclick = () => {
-          endFlow(token);
-          dialog.close();
-          void start(client);
-        };
-        return;
-      }
-      if (disconnected) {
-        content.innerHTML =
-          '<div class="legacy-qr-recovery"><strong>Connection interrupted</strong><p>Check your connection, then create a new QR code to continue.</p></div>';
-        caption.innerHTML =
-          '<p>Unable to receive verification updates.</p><button class="legacy-action" type="button">Create new QR code</button>';
-        caption.querySelector("button").onclick = () => {
-          endFlow(token);
-          dialog.close();
-          void start(client);
-        };
-        return;
-      }
-      const countdown = `${String(Math.floor(left / 60)).padStart(2, "0")}:${String(left % 60).padStart(2, "0")}`;
-      content.innerHTML = started
-        ? '<p role="status">Verification in progress… Complete the steps on your phone.</p>'
-        : `<div class="legacy-qr-code">${code.createSvgTag({ cellSize: 4, margin: 0 })}</div><a data-testid="qr-auth-link" class="sr-only" target="_blank" rel="noreferrer"></a>`;
-      const link = content.querySelector("a");
-      if (link) {
-        link.href = attempt.url;
-        link.textContent = "Open verification link";
-      }
-      caption.innerHTML = `${started ? "" : "<p>Scan QR code with your phone</p>"}<p class="legacy-qr-status" role="status">${started ? "Waiting for the verification result…" : "Waiting for verification…"}</p><p class="legacy-qr-expiry">${started ? "Complete verification in" : "Expires in"} <span class="legacy-qr-countdown">${countdown}</span></p>`;
-    }
-    async function poll() {
-      if (!active || busy) return;
-      busy = true;
-      const controller = new AbortController();
-      requestController = controller;
-      const timeout = setTimeout(() => controller.abort(), 5000);
-      try {
-        const r = await fetch(
-          `/auth/status?${new URLSearchParams({ state: attempt.state })}`,
-          { cache: "no-store", signal: controller.signal },
-        );
-        const data = await r.json();
-        if (!active) return;
-        if (!r.ok && [400, 401, 403].includes(r.status)) {
-          deadline = 0;
-          draw();
-          clearInterval(polling);
-          return;
-        }
-        if (!r.ok) throw new Error("unavailable");
-        disconnected = false;
-        if (data.status === "finished") location.assign("/user/info");
-        else if (data.status === "completed" || data.status === "failed") {
-          const url = completionUrlForAttempt(
-            data.completionUrl,
-            location.origin,
-            attempt.state,
-          );
-          if (url) location.assign(url);
-          else throw new Error("Invalid completion URL");
-        } else if (
-          data.status === "pending" &&
-          data.started === true &&
-          Number.isFinite(data.expiresAt)
-        ) {
-          started = true;
-          deadline = Math.min(data.expiresAt, attempt.expiresAt + 300000);
-          draw();
-        } else if (
-          data.status !== "pending" ||
-          typeof data.started !== "boolean" ||
-          !Number.isFinite(data.expiresAt)
-        ) {
-          throw new Error("unavailable");
-        }
-      } catch {
-        if (active) {
-          disconnected = true;
-          draw();
-        }
-      } finally {
-        clearTimeout(timeout);
-        if (requestController === controller) requestController = undefined;
-        busy = false;
-      }
-    }
-    const timer = setInterval(draw, 1000),
-      polling = setInterval(poll, 2000);
-    dialog.addEventListener("cancel", () => {
-      active = false;
-    });
-    dialog.querySelector('[data-slot="dialog-close"]').onclick = () => {
-      active = false;
-      dialog.close();
-    };
-    dialog.addEventListener("close", () => {
-      active = false;
-      requestController?.abort();
-      endFlow(token);
-      clearInterval(timer);
-      clearInterval(polling);
-      dialog.remove();
-    });
-    document.body.append(dialog);
-    draw();
-    dialog.showModal();
-    dialog.focus();
-    void poll();
-  }
-
   async function jsonPost(url, body, signal) {
     const response = await fetch(url, {
       method: "POST",
@@ -623,199 +498,6 @@ try {
       ? await response.json()
       : await response.text();
     return { response, data };
-  }
-  function showSms(client, token) {
-    const dialog = document.createElement("dialog"),
-      controller = new AbortController();
-    dialog.className = "legacy-dialog legacy-sms-dialog";
-    dialog.dataset.slot = "dialog-content";
-    dialog.innerHTML =
-      '<header data-slot="dialog-header"><h2 data-slot="dialog-title">Enter OTP code</h2><p>Enter the verification code sent to your phone.</p></header><form><label for="sms-code">OTP code</label><input id="sms-code" autocomplete="one-time-code" inputmode="numeric" disabled><p role="status">Sending code…</p><p role="alert" hidden></p><div><button type="button">Cancel</button><button type="button" data-retry hidden>Retry</button><button type="submit" disabled>Verify</button></div></form>';
-    const input = dialog.querySelector("input"),
-      form = dialog.querySelector("form"),
-      error = dialog.querySelector('[role="alert"]'),
-      status = dialog.querySelector('[role="status"]'),
-      submit = dialog.querySelector('[type="submit"]');
-    let auth,
-      inFlight = false;
-    dialog.querySelector('[type="button"]').onclick = () => {
-      controller.abort();
-      endFlow(token);
-      dialog.close();
-    };
-    dialog.addEventListener("cancel", () => {
-      controller.abort();
-      endFlow(token);
-    });
-    dialog.addEventListener("close", () => {
-      controller.abort();
-      endFlow(token);
-      dialog.remove();
-    });
-    input.oninput = () => {
-      input.value = input.value.replace(/\D/g, "");
-      submit.disabled = inFlight || !input.value;
-    };
-    async function verify(code) {
-      if (inFlight || !auth || !code) return;
-      inFlight = true;
-      submit.disabled = true;
-      error.hidden = true;
-      try {
-        const { response, data } = await jsonPost(
-          "/sms/token",
-          { ...auth, client_id: client.client_id, server_id: server, code },
-          controller.signal,
-        );
-        await jsonPost(
-          "/sms/log",
-          { data: { type: "get_token_response", data } },
-          controller.signal,
-        );
-        if (!response.ok)
-          throw new Error(
-            data.data?.error_description ||
-              data.error ||
-              "Unable to verify OTP code",
-          );
-        location.assign("/user/info");
-      } catch (e) {
-        if (!controller.signal.aborted) {
-          error.textContent = e.message;
-          error.hidden = false;
-        }
-      } finally {
-        inFlight = false;
-        if (!controller.signal.aborted) submit.disabled = !input.value;
-      }
-    }
-    form.onsubmit = (event) => {
-      event.preventDefault();
-      if (auth && input.value) void verify(input.value);
-    };
-    document.body.append(dialog);
-    dialog.showModal();
-    async function sendCode() {
-      error.hidden = true;
-      status.hidden = false;
-      dialog.querySelector("[data-retry]").hidden = true;
-      try {
-        const { response, data } = await jsonPost(
-          "/sms/auth",
-          {
-            client_id: client.client_id,
-            server_id: server,
-            login_hint: phone,
-            scope: "openid ip:phone_verify",
-          },
-          controller.signal,
-        );
-        if (!response.ok)
-          throw new Error(data.error || "Unable to start SMS verification");
-        auth = { auth_req_id: data.auth_req_id, nonce: data.nonce };
-        input.disabled = false;
-        status.hidden = true;
-        input.focus();
-        if ("OTPCredential" in window && navigator.credentials?.get)
-          navigator.credentials
-            .get({ otp: { transport: ["sms"] }, signal: controller.signal })
-            .then((credential) => {
-              if (credential?.code) {
-                input.value = credential.code;
-                void verify(credential.code);
-              }
-            })
-            .catch(() => {});
-      } catch (e) {
-        if (!controller.signal.aborted) {
-          status.hidden = true;
-          error.hidden = false;
-          error.textContent = e.message;
-          dialog.querySelector("[data-retry]").hidden = false;
-        }
-      }
-    }
-    dialog.querySelector("[data-retry]").onclick = sendCode;
-    void sendCode();
-  }
-  async function startSim(client, token) {
-    if (activeSim) return;
-    const login = client.user_flow === "login_sim",
-      alert = container.querySelector("#flow-error"),
-      controller = new AbortController();
-    const attempt = { controller };
-    activeSim = attempt;
-    const button = container.querySelector(`#${client.user_flow}`);
-    button.disabled = true;
-    button.setAttribute("aria-busy", "true");
-    const pending = document.createElement("div");
-    pending.className = "legacy-pending";
-    pending.innerHTML =
-      '<p role="status">Waiting for SIM verification…</p><button type="button">Cancel</button>';
-    container.querySelector(".legacy-section").append(pending);
-    function release() {
-      if (activeSim !== attempt) return;
-      activeSim = null;
-      endFlow(token);
-      pending.remove();
-    }
-    pending.querySelector("button").onclick = () => {
-      controller.abort();
-      release();
-    };
-    try {
-      const { response, data } = await jsonPost(
-        "/ts43/auth",
-        {
-          client_id: client.client_id,
-          server_id: server,
-          login_hint: login ? "anonymous" : phone,
-          carrier_hint: 51010,
-          scope: login ? "openid ip:phone" : "openid ip:phone_verify",
-          ...(login ? { operation: "GetPhoneNumber" } : {}),
-        },
-        controller.signal,
-      );
-      if (!response.ok)
-        throw new Error(data.error || "Unable to start SIM verification");
-      const credential = await navigator.credentials.get({
-        digital: { requests: [data.digital_request] },
-        signal: controller.signal,
-      });
-      if (activeSim !== attempt) return;
-      if (!credential) throw new Error("SIM verification was cancelled.");
-      const vp = (credential.token || credential.data)?.vp_token?.[
-        "ipification.com"
-      ]?.[0];
-      if (!vp)
-        throw new Error(
-          "This browser did not return a supported SIM credential. Choose another method.",
-        );
-      const token = await jsonPost(
-        "/ts43/token",
-        {
-          vp_token: vp,
-          auth_req_id: data.auth_req_id,
-          client_id: client.client_id,
-          server_id: server,
-          nonce: data.nonce,
-        },
-        controller.signal,
-      );
-      await jsonPost(
-        "/ts43/log",
-        { data: { type: "get_token_response", data: token.data } },
-        controller.signal,
-      );
-      location.assign("/user/info");
-    } catch (error) {
-      if (activeSim === attempt) {
-        alert.textContent = error.message || "SIM verification is unavailable.";
-        alert.hidden = false;
-      }
-    } finally {
-      release();
-    }
   }
 } catch {
   const loading = document.querySelector(".legacy-loading");

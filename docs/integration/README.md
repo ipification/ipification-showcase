@@ -20,7 +20,7 @@ This guide is the starting point for the Express showcase documentation. It expl
 
 - Start with [the screen](../../public/js/showcase.js), then [method selection and preparation](../../public/js/showcase.js).
 - For browser redirects, follow [web handlers](../../src/server/auth/web.ts), [auth service](../../src/server/auth/service.ts), then [provider calls](../../src/server/auth/provider.ts). [Attempt storage](../../src/server/auth/attempts.ts) handles browser bindings, expiry and concurrent callbacks.
-- For QR, follow [QR polling](../../public/js/showcase.js) and [pending-page polling](../../public/js/pending.js). For SMS and SIM, start with [SMS UI](../../public/js/showcase.js) or [SIM UI](../../public/js/showcase.js), then [CIBA provider calls](../../src/server/ciba/provider.ts).
+- For QR, follow [QR polling](../../public/js/qr.js) and [pending-page polling](../../public/js/pending.js). For SMS and SIM, start with [SMS UI](../../public/js/sms.js) or [SIM UI](../../public/js/sim.js), then [CIBA provider calls](../../src/server/ciba/provider.ts).
 - [Play Integrity service](../../src/server/integrity/service.ts) is a separate optional Android flow. [Session store](../../src/server/session/store.ts) holds demo display sessions; it is not the provider's user session.
 
 ## Who calls whom?
