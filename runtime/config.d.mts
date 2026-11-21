@@ -1,4 +1,4 @@
-import type { ServerConfig } from "../src/server/config/load";
+import type { ServerConfig } from "../src/config/load";
 export function initializeConfigEnvironment(options?: {
   appRoot?: string;
   dev?: boolean;

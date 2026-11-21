@@ -2,7 +2,7 @@ import { test, expect } from "vitest";
 import {
   canonicalJson,
   createRequestHash,
-} from "@/server/shared/canonical-json";
+} from "@/shared/server/common/canonical-json";
 test("canonical payload rejects ambiguous inputs and hashes sorted nested JSON", () => {
   expect(canonicalJson({ b: 1, a: { z: 2, c: 3 } })).toBe(
     '{"a":{"c":3,"z":2},"b":1}',

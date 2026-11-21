@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import { randomUUID } from "node:crypto";
-import { authAttempts, bindingHash } from "@/server/auth/attempts";
-import { memoryStore } from "@/server/store/memory";
+import { authAttempts, bindingHash } from "@/modules/browser-auth/attempts";
+import { memoryStore } from "@/shared/server/storage/memory";
 
 test("expired attempts fail even while their storage record exists", async () => {
   const state = randomUUID(),

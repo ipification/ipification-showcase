@@ -85,7 +85,7 @@ Object.assign(config, {
   locale: { app: { name: "IPification Showcase" } },
 });
 writeFileSync(path.join(dir, "default.json"), JSON.stringify(config));
-const args = ["--import", "tsx", "src/server/express/index.ts"];
+const args = ["--import", "tsx", "src/server.ts"];
 const child = spawn(process.execPath, args, {
   env: {
     ...process.env,

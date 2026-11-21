@@ -1,5 +1,5 @@
 import { test, expect } from "vitest";
-import { toPublicConfig } from "@/server/config/public";
+import { toPublicConfig } from "@/config/public";
 import { serviceContext } from "../helpers/service-context";
 test("public callback URLs identify default and alternate servers", () => {
   const config = {

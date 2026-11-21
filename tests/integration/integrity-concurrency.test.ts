@@ -1,5 +1,5 @@
 import { test, expect } from "vitest";
-import { createPlayIntegrityAttemptService } from "@/server/integrity/attempts";
+import { createPlayIntegrityAttemptService } from "@/modules/play-integrity/attempts";
 test("shared attempts and transactions are claimed once with fixed TTL", async () => {
   const options = {
     stateSecret: "fixture-state-secret",

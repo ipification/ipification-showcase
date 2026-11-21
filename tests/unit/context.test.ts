@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
-import { resolveRequestIdentity } from "@/server/http/context";
-import { readBody } from "@/server/http/body";
+import { resolveRequestIdentity } from "@/shared/server/http/context";
+import { readBody } from "@/shared/server/http/body";
 test("public origin and verification hostname come from the trusted incoming request", () => {
   expect(
     resolveRequestIdentity(

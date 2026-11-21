@@ -1,4 +1,4 @@
-import type { ServerConfig } from "@/server/config/load";
+import type { ServerConfig } from "@/config/load";
 export const serviceContext = {
   origin: "https://showcase.example",
   hostname: "showcase.example",

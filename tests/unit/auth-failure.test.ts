@@ -1,6 +1,6 @@
 import { test, expect } from "vitest";
 import { AxiosError } from "axios";
-import { describeAuthFailure } from "@/server/auth/failure";
+import { describeAuthFailure } from "@/modules/browser-auth/failure";
 import { authFailureReason, safeProviderCode } from "@/shared/auth-failures";
 test.each(["ECONNREFUSED", "ETIMEDOUT"])(
   "%s offers temporary provider recovery without inventing a credential diagnosis",

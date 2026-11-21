@@ -1,8 +1,8 @@
 import { test, expect } from "vitest";
 import { startProvider } from "../helpers/provider";
-import { exchangeCodeAndGetUserInfo } from "@/server/shared/http-client";
-import { verifySmsCode } from "@/server/ciba/provider";
-import { describeAuthFailure } from "@/server/auth/failure";
+import { exchangeCodeAndGetUserInfo } from "@/shared/server/common/http-client";
+import { verifySmsCode } from "@/shared/server/ciba/provider";
+import { describeAuthFailure } from "@/modules/browser-auth/failure";
 
 for (const malformed of [
   null,

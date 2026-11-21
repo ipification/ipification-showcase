@@ -101,6 +101,6 @@ Unlike `/auth/status`, this handler does not check an owner cookie or authentica
 
 ## Source and tests
 
-- [Mobile handler](../../src/server/auth/mobile.ts) and [auth service](../../src/server/auth/service.ts).
-- [S2S handler](../../src/server/express/routes/auth/s2s/signin/route.ts) and [in-memory result store](../../src/server/store/auth-results.ts).
+- [Mobile handler](../../src/modules/mobile/controller.ts) and [auth service](../../src/modules/browser-auth/service.ts).
+- [S2S handler](../../src/modules/s2s/controller.ts) and [in-memory result store](../../src/shared/server/storage/auth-results.ts).
 - [Mobile and S2S contracts](../../tests/contracts/mobile-s2s.test.ts) and [web callback contracts](../../tests/contracts/web-auth.test.ts).

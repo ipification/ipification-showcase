@@ -1,11 +1,11 @@
 import { test, expect } from "vitest";
-import { memoryStore } from "@/server/store/memory";
+import { memoryStore } from "@/shared/server/storage/memory";
 import {
   createSession,
   readSession,
   consumeSessionError,
   deleteSession,
-} from "@/server/session/store";
+} from "@/shared/server/session/store";
 test("opaque sessions rotate, stay server-side and atomically consume errors", async () => {
   try {
     const id = await createSession({

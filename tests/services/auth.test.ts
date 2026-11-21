@@ -1,7 +1,7 @@
 import { expect, test, vi } from "vitest";
-import { createAuthService } from "@/server/auth/service";
+import { createAuthService } from "@/modules/browser-auth/service";
 import { serviceContext as context } from "../helpers/service-context";
-import { decodeStart, decodeCallback, decodeMobile } from "@/server/auth/input";
+import { decodeStart, decodeCallback, decodeMobile } from "@/modules/browser-auth/input";
 function setup() {
   const calls: string[] = [];
   const results = {

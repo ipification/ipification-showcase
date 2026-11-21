@@ -15,7 +15,7 @@
     "paths": { "@/*": ["./src/*"] }
   },
   "include": [
-    "src/server/**/*.ts",
+    "src/**/*.ts",
     "src/shared/**/*.ts",
     "tests/**/*.ts",
     "e2e/**/*.ts",

@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { MemoryStore } from "@/server/store/memory";
+import { MemoryStore } from "@/shared/server/storage/memory";
 
 test("memory store enforces expiry and rejects new keys when full", async () => {
   const store = new MemoryStore(1);

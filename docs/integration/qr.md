@@ -31,7 +31,7 @@ The initiating browser polls immediately and then every two seconds. `GET /auth/
 
 For local testing, open the desktop app with a LAN IP or hostname reachable from the phone **before generating the QR**. `localhost` in a QR refers to the phone itself. The provider must also accept the exact callback URL. See [running locally](running.md). QR/polling are showcase implementation choices: a customer can use a different secure completion mechanism.
 
-See [QR polling implementation](../../public/js/qr.js) and [pending-page polling](../../public/js/pending.js), [QR dialog](../../public/js/qr.js), [attempt storage](../../src/server/auth/attempts.ts), and [status handler](../../src/server/auth/web.ts).
+See [QR polling implementation](../../public/js/flows/qr.js) and [pending-page polling](../../public/js/pending.js), [QR dialog](../../public/js/flows/qr.js), [attempt storage](../../src/modules/browser-auth/attempts.ts), and [status handler](../../src/modules/browser-auth/web.ts).
 
 The phone result page currently treats the string `"false"` as failure but boolean `false` as success, while the desktop result preserves and displays the original userinfo. This legacy-compatible behavior is covered by a contract test; do not use the phone result page as the verification decision. Apply your own provider-claim policy.
 

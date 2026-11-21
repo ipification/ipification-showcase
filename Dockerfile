@@ -17,14 +17,12 @@ WORKDIR /usr/app
 ENV NODE_ENV=production PORT=3002
 COPY --from=production-dependencies /usr/app/node_modules ./node_modules
 COPY --from=builder /usr/app/public ./public
-COPY --from=builder /usr/app/views ./views
 COPY --from=builder /usr/app/config ./config
 COPY --from=builder /usr/app/runtime ./runtime
 COPY --from=builder /usr/app/scripts ./scripts
-COPY --from=builder /usr/app/src/server ./src/server
-COPY --from=builder /usr/app/src/shared ./src/shared
+COPY --from=builder /usr/app/src ./src
 COPY --from=builder /usr/app/package.json /usr/app/tsconfig.json ./
 RUN mkdir -p /run/showcase-config && chown -R node:node /usr/app /run/showcase-config
 USER node
 EXPOSE 3002
-CMD ["node", "--import", "tsx", "src/server/express/index.ts"]
+CMD ["node", "--import", "tsx", "src/server.ts"]

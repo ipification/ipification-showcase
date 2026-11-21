@@ -1,5 +1,5 @@
 import { test, expect } from "vitest";
-import { createAuthResultStore } from "@/server/store/auth-results";
+import { createAuthResultStore } from "@/shared/server/storage/auth-results";
 test("result writes remain sequential and total miss retains five reads and sleeps", async () => {
   const operations: string[] = [];
   const store = createAuthResultStore(

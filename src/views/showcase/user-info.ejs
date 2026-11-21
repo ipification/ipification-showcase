@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/css/showcase.css"><title>IPification Showcase</title>
+</head>
+<body>
+<div class="legacy-result-page">
+<main class="legacy-result">
+<header><h1><%= result.client_title %></h1><a href="/" class="legacy-result-close" aria-label="Back to Showcase">×</a>
+</header>
+<section aria-label="Userinfo"><button type="button" id="copy-json">Copy JSON</button><span role="status" id="copy-status"></span><pre class="legacy-result-json"><%- highlightedJson %></pre>
+</section>
+<% if (showExplanation) { %>
+<aside class="legacy-result-help" aria-label="Phone verification explanation"><h2>About <code>phone_number_verified</code></h2><p><code>true</code> / <code>"true"</code>: <span>Phone verification succeeded.</span></p><p><code>false</code> / <code>"false"</code>: <span>Phone verification did not succeed. Retry or use another method, such as SMS OTP.</span></p><p>Missing or other values do not confirm phone verification.</p><p>Check this value in your backend before accepting verification. The string <code>"false"</code> is truthy in JavaScript.</p>
+</aside><% } %>
+<footer>
+<div>client id: <%= result.client_id %>
+</div>
+<div>state: <%= result.state %>
+</div>
+</footer>
+</main>
+</div>
+<script type="module" src="/js/result.js">
+</script>
+</body>
+</html>

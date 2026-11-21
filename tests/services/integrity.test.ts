@@ -1,6 +1,6 @@
 import { test, expect, vi } from "vitest";
-import { createIntegrityService } from "@/server/integrity/service";
-import { UpstreamUnavailableError } from "@/server/shared/errors";
+import { createIntegrityService } from "@/modules/play-integrity/service";
+import { UpstreamUnavailableError } from "@/shared/server/common/errors";
 import { serviceContext } from "../helpers/service-context";
 function setup() {
   const attempt = {

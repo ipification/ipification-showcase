@@ -1,5 +1,5 @@
 import { test, expect } from "vitest";
-import { checkTs43Limit } from "@/server/store/rate-limit";
+import { checkTs43Limit } from "@/shared/server/storage/rate-limit";
 test("identity limit has shared atomic count and Retry-After", async () => {
   try {
     const results = await Promise.all(

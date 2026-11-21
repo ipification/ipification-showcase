@@ -1,10 +1,10 @@
 import { test, expect } from "vitest";
-import { memoryStore } from "@/server/store/memory";
+import { memoryStore } from "@/shared/server/storage/memory";
 import {
   saveResult,
   waitForResult,
   getUserInfo,
-} from "@/server/store/auth-results";
+} from "@/shared/server/storage/auth-results";
 test("results are shared, retain one hour TTL and S2S reads do not consume", async () => {
   try {
     const value = {

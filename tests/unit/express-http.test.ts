@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Readable } from "node:stream";
-import { toWebRequest, writeWebResponse } from "@/server/express/http";
+import { toWebRequest, writeWebResponse } from "@/shared/server/express/http";
 describe("Express HTTP adapter", () => {
   it("retains URL and ignores the supplied peer header", () => {
     const req = Object.assign(Readable.from([]), {

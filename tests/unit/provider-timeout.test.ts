@@ -1,12 +1,12 @@
 import { test, expect, vi } from "vitest";
 import { startProvider } from "../helpers/provider";
-import { exchangeCodeAndGetUserInfo } from "@/server/shared/http-client";
+import { exchangeCodeAndGetUserInfo } from "@/shared/server/common/http-client";
 import {
   sendSmsCode,
   verifySmsCode,
   createSimCredentialRequest,
-} from "@/server/ciba/provider";
-import { describeAuthFailure } from "@/server/auth/failure";
+} from "@/shared/server/ciba/provider";
+import { describeAuthFailure } from "@/modules/browser-auth/failure";
 const credentials = {
   realm: "demo",
   clientId: "fixture-client",

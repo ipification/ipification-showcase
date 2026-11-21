@@ -54,7 +54,7 @@ const { url } = await response.json();
 window.location.assign(url);
 ```
 
-The backend uses [`openid-client`](https://github.com/panva/openid-client) for code exchange and userinfo. The app constructs its configuration from the configured Keycloak endpoints, uses `client_secret_post` at the token endpoint, then sends the access token as a Bearer header to userinfo. The library requires a conforming token response including `token_type` and a userinfo response containing `sub`. See [provider](../../src/server/auth/provider.ts) and [HTTP client](../../src/server/shared/http-client.ts).
+The backend uses [`openid-client`](https://github.com/panva/openid-client) for code exchange and userinfo. The app constructs its configuration from the configured Keycloak endpoints, uses `client_secret_post` at the token endpoint, then sends the access token as a Bearer header to userinfo. The library requires a conforming token response including `token_type` and a userinfo response containing `sub`. See [provider](../../src/modules/browser-auth/provider.ts) and [HTTP client](../../src/shared/server/common/http-client.ts).
 
 ```js
 import * as oidc from 'openid-client';

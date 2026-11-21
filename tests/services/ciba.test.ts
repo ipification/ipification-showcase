@@ -1,6 +1,6 @@
 import { expect, test, vi } from "vitest";
-import { createCibaService } from "@/server/ciba/service";
-import { decodeCiba } from "@/server/ciba/input";
+import { createCibaService } from "@/shared/server/ciba/service";
+import { decodeCiba } from "@/shared/server/ciba/input";
 import { serviceContext as context } from "../helpers/service-context";
 function setup() {
   const sessions = {

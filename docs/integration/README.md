@@ -18,10 +18,13 @@ This guide is the starting point for the Express showcase documentation. It expl
 
 ## Read the source
 
-- Start with [the screen](../../public/js/showcase.js), then [method selection and preparation](../../public/js/showcase.js).
-- For browser redirects, follow [web handlers](../../src/server/auth/web.ts), [auth service](../../src/server/auth/service.ts), then [provider calls](../../src/server/auth/provider.ts). [Attempt storage](../../src/server/auth/attempts.ts) handles browser bindings, expiry and concurrent callbacks.
-- For QR, follow [QR polling](../../public/js/qr.js) and [pending-page polling](../../public/js/pending.js). For SMS and SIM, start with [SMS UI](../../public/js/sms.js) or [SIM UI](../../public/js/sim.js), then [CIBA provider calls](../../src/server/ciba/provider.ts).
-- [Play Integrity service](../../src/server/integrity/service.ts) is a separate optional Android flow. [Session store](../../src/server/session/store.ts) holds demo display sessions; it is not the provider's user session.
+- **Screen:** [showcase entry](../../public/js/showcase.js), [routes](../../src/modules/showcase/routes.ts) and [views](../../src/views/showcase).
+- **Browser authorization:** [browser routes](../../src/modules/browser-auth/routes.ts) → [web handlers](../../src/modules/browser-auth/web.ts) → [auth service](../../src/modules/browser-auth/service.ts) → [provider calls](../../src/modules/browser-auth/provider.ts). [Attempt storage](../../src/modules/browser-auth/attempts.ts) handles bindings, expiry and concurrent callbacks.
+- **QR:** [QR UI and polling](../../public/js/flows/qr.js) → browser auth status and completion routes. The [pending page](../../public/js/pending.js) also polls status for applicable IM flows.
+- **SMS:** [SMS UI](../../public/js/flows/sms.js) → [routes](../../src/modules/sms/routes.ts) → [controller](../../src/modules/sms/controller.ts) → [shared CIBA service](../../src/shared/server/ciba/service.ts) and [provider calls](../../src/shared/server/ciba/provider.ts).
+- **SIM:** [SIM UI](../../public/js/flows/sim.js) → [routes](../../src/modules/sim/routes.ts) → [controller](../../src/modules/sim/controller.ts) → the shared CIBA service and provider. SIM has its own credential and rate-limit steps.
+- **Mobile and S2S:** [mobile routes](../../src/modules/mobile/routes.ts) and [controller](../../src/modules/mobile/controller.ts) exchange a code; [S2S routes](../../src/modules/s2s/routes.ts) and [controller](../../src/modules/s2s/controller.ts) read a stored result.
+- **Play Integrity:** [routes](../../src/modules/play-integrity/routes.ts) and [service](../../src/modules/play-integrity/service.ts) implement the optional Android flow. The shared [session store](../../src/shared/server/session/store.ts) holds demo display sessions, not the provider's user session.
 
 ## Who calls whom?
 

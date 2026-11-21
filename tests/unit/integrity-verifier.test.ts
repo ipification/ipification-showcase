@@ -1,5 +1,5 @@
 import { test, expect } from "vitest";
-import { createPlayIntegrityService } from "@/server/integrity/verifier";
+import { createPlayIntegrityService } from "@/modules/play-integrity/verifier";
 function fixture(overrides: Record<string, any> = {}) {
   const decoded = {
     tokenPayloadExternal: {

@@ -1,6 +1,6 @@
 import { test, expect } from "vitest";
-import { ProviderError, providerFailure } from "@/server/shared/errors";
-import { describeAuthFailure } from "@/server/auth/failure";
+import { ProviderError, providerFailure } from "@/shared/server/common/errors";
+import { describeAuthFailure } from "@/modules/browser-auth/failure";
 test("provider failures expose one typed envelope with explicit step and preserve endpoint-specific presentation", () => {
   const error = new ProviderError("token", {
     message: "Request failed with status code 401",

@@ -20,7 +20,7 @@ These paths belong to **the showcase**, not the IPification provider. Unless not
 | `GET /auth/error`, `/auth/login/error`, `/auth/session-required` | Error/session handling pages or redirects. |
 | `GET /user/info` | Session-backed result page. |
 
-The login UI uses `/auth/prepare` before `/auth/start`; calling the old start URL without a valid prepared attempt is not equivalent. The QR and IM waiting logic polls status every two seconds; these routes and cookies are demo-specific. [Browser flow](browser-flows.md) · [QR](qr.md) · [Auth handlers](../../src/server/auth/web.ts)
+The login UI uses `/auth/prepare` before `/auth/start`; calling the old start URL without a valid prepared attempt is not equivalent. The QR and IM waiting logic polls status every two seconds; these routes and cookies are demo-specific. [Browser flow](browser-flows.md) · [QR](qr.md) · [Auth handlers](../../src/modules/browser-auth/web.ts)
 
 ## JSON and operational endpoints
 
@@ -41,6 +41,6 @@ For request examples, response behavior and security boundaries, see [Mobile and
 
 In the SMS and TS43 rows, each second path has the same prefix shown in its first path. `/auth/mobile/login` and `/auth/s2s/signin` preserve demo API contracts; their existence does not establish an authorization policy suitable for arbitrary internet-facing clients. Review access controls and protect sensitive requests in your deployment.
 
-For CIBA responses, a successful start includes `auth_server`, `auth_req_id`, `nonce`, and for SIM `digital_request`. Token success returns `auth_server` and provider userinfo. Failures can return JSON or, for some auth errors, text. Session creation can occur for error data; it does not prove verification. See [handlers](../../src/server/ciba/handlers.ts).
+For CIBA responses, a successful start includes `auth_server`, `auth_req_id`, `nonce`, and for SIM `digital_request`. Token success returns `auth_server` and provider userinfo. Failures can return JSON or, for some auth errors, text. Session creation can occur for error data; it does not prove verification. See the [SMS controller](../../src/modules/sms/controller.ts) and [SIM controller](../../src/modules/sim/controller.ts).
 
 The demo frontend also reads `GET /api/showcase-config` for public UI configuration, labels and enabled clients. It contains no configured client secret.

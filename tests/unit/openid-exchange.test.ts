@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { test, expect } from "vitest";
-import { exchangeCodeAndGetUserInfo } from "@/server/shared/http-client";
+import { exchangeCodeAndGetUserInfo } from "@/shared/server/common/http-client";
 
 test("authorization code uses client_secret_post and userinfo uses Bearer without modifying claims", async () => {
   const calls: { path: string; authorization?: string; body: string }[] = [];
