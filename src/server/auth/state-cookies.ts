@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { validState, AUTH_ATTEMPT_MS } from "./attempts";
 // Separate random cookies bind the initiating browser and the callback browser
-// to one state. Only their hashes are stored in the Redis attempt.
+// to one state. Only their hashes are stored in the server-side attempt.
 export const newBinding = () => randomBytes(32).toString("hex");
 function name(kind: "owner" | "callback", state: string) {
   return `showcase_oauth_${kind}_${state}`;

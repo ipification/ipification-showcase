@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { configFixture } from "../helpers/config";
 import { tmpdir } from "node:os";
 import path from "node:path";
-test("config checker validates mounted config without Redis or provider calls", () => {
+test("config checker validates mounted config without provider calls", () => {
   const c = configFixture();
   try {
     const run = (dir: string) =>
@@ -15,7 +15,6 @@ test("config checker validates mounted config without Redis or provider calls", 
           APP_ENV: "stage",
           NODE_CONFIG_ENV: "stage",
           NODE_CONFIG_DIR: dir,
-          REDIS_URL: "redis://127.0.0.1:1",
         },
         encoding: "utf8",
       });

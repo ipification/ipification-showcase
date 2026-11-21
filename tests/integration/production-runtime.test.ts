@@ -12,7 +12,6 @@ test.runIf(!!process.env.TEST_DOCKER_IMAGE)(
   async () => {
     const id = "showcase-smoke-" + randomUUID().slice(0, 8),
       network = id + "-net",
-      redis = id + "-redis",
       app = id + "-app";
     const config = configFixture();
     const filename = path.join(config.dir, "default.json");
@@ -34,8 +33,6 @@ test.runIf(!!process.env.TEST_DOCKER_IMAGE)(
       "NODE_ENV=production",
       "-e",
       "NODE_CONFIG_DIR=/run/showcase-config",
-      "-e",
-      `REDIS_URL=redis://${redis}:6379`,
       "--mount",
       `type=bind,source=${filename},target=/run/showcase-config/default.json,readonly`,
       process.env.TEST_DOCKER_IMAGE!,
@@ -52,16 +49,6 @@ test.runIf(!!process.env.TEST_DOCKER_IMAGE)(
     }
     try {
       await docker("network", "create", network);
-      await docker(
-        "run",
-        "--rm",
-        "-d",
-        "--network",
-        network,
-        "--name",
-        redis,
-        "redis:7.4.7-alpine",
-      );
       await docker(...args);
       await ready();
       expect((await docker("exec", app, "id", "-u")).stdout.trim()).not.toBe(
@@ -95,7 +82,6 @@ test.runIf(!!process.env.TEST_DOCKER_IMAGE)(
       ).toBe("changed-runtime");
     } finally {
       await docker("rm", "-f", app).catch(() => {});
-      await docker("rm", "-f", redis).catch(() => {});
       await docker("network", "rm", network).catch(() => {});
       config.remove();
     }

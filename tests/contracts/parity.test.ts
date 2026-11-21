@@ -1,14 +1,11 @@
 import { test, expect } from "vitest";
 import { startApp } from "../helpers/processes";
-import { startRedis } from "../helpers/redis";
 import { configFixture } from "../helpers/config";
 
 test("HTTP endpoints reject unbound authentication and malformed requests", async () => {
-  const redis = await startRedis();
   const config = configFixture();
   const app = await startApp({
     NODE_CONFIG_DIR: config.dir,
-    REDIS_URL: redis.url,
     PLAY_INTEGRITY_ENABLED: "false",
   });
   try {
@@ -47,6 +44,5 @@ test("HTTP endpoints reject unbound authentication and malformed requests", asyn
   } finally {
     await app.stop();
     config.remove();
-    await redis.stop();
   }
 });

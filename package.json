@@ -18,10 +18,12 @@
     "config:check": "node scripts/check-config.mjs"
   },
   "dependencies": {
+    "@isaacs/ttlcache": "^2.1.5",
     "axios": "^1.21.0",
     "config": "^5.0.1",
     "dotenv": "^18.0.10",
     "dotenv-expand": "^12.0.3",
+    "ejs": "^7.0.2",
     "express": "^5.3.0",
     "geoip-lite": "^2.0.3",
     "google-auth-library": "^11.3.1",
@@ -30,7 +32,6 @@
     "openid-client": "^6.8.8",
     "qrcode-generator": "^2.0.4",
     "qs": "^6.17.0",
-    "redis": "^6.3.0",
     "tsx": "^4.23.15"
   },
   "devDependencies": {

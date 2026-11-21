@@ -9,7 +9,7 @@ This document describes an Android demo that checks Google Play Integrity before
 The demo intentionally does **not** implement a pre-auth session or an authenticated-user session.
 
 - Each attempt is short-lived and single-use.
-- The backend persists attempts and transactions in Redis or a database.
+- The demo keeps attempts and transactions in bounded process memory; restarting clears them.
 - The demo proves that a Google verdict is bound to an immutable IPification operation.
 - It does **not** prove that the operation belongs to a specific logged-in user or device owner.
 

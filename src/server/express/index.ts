@@ -5,7 +5,6 @@ initializeConfigEnvironment({
   dev: process.env.NODE_ENV !== "production",
 });
 const { createApp } = await import("./app");
-const { closeRedis } = await import("../store/redis");
 const port = Number(process.env.PORT || 3002);
 const server = createApp().listen(port, "0.0.0.0", () => {
   console.log(`Showcase listening on ${port}`);
@@ -24,7 +23,6 @@ const server = createApp().listen(port, "0.0.0.0", () => {
 async function close() {
   server.close();
   server.closeAllConnections();
-  await closeRedis();
 }
 process.once("SIGTERM", close);
 process.once("SIGINT", close);

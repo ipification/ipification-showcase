@@ -17,6 +17,7 @@ WORKDIR /usr/app
 ENV NODE_ENV=production PORT=3002
 COPY --from=production-dependencies /usr/app/node_modules ./node_modules
 COPY --from=builder /usr/app/public ./public
+COPY --from=builder /usr/app/views ./views
 COPY --from=builder /usr/app/config ./config
 COPY --from=builder /usr/app/runtime ./runtime
 COPY --from=builder /usr/app/scripts ./scripts

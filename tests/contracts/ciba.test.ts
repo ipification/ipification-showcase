@@ -1,11 +1,9 @@
 import { test, expect } from "vitest";
 import { startApp, freePort } from "../helpers/processes";
-import { startRedis } from "../helpers/redis";
 import { startProvider } from "../helpers/provider";
 import { configFixture } from "../helpers/config";
 test("CIBA endpoints preserve provider order, token error sessions and protocol payloads", async () => {
-  const redis = await startRedis(),
-    provider = await startProvider();
+  const provider = await startProvider();
   const config = configFixture({
     auth_servers: [{ id: "stage", url: provider.url }],
   });
@@ -13,7 +11,6 @@ test("CIBA endpoints preserve provider order, token error sessions and protocol 
   const app = await startApp({
     PORT: String(port),
     NODE_CONFIG_DIR: config.dir,
-    REDIS_URL: redis.url,
   });
   const post = (path: string, body: unknown) =>
     fetch(app.url + path, {
@@ -96,6 +93,5 @@ test("CIBA endpoints preserve provider order, token error sessions and protocol 
     await app.stop();
     config.remove();
     await provider.stop();
-    await redis.stop();
   }
 });

@@ -46,6 +46,8 @@ function adapt(handler: Handler) {
 export function createApp() {
   const app = express();
   app.disable("x-powered-by");
+  app.set("view engine", "ejs");
+  app.set("views", path.resolve("views"));
   app.use((req, res, next) => {
     const requestId = randomUUID(),
       started = Date.now();
@@ -121,10 +123,10 @@ export function createApp() {
     }
   });
   app.get("/auth/pending", (_req, res) =>
-    res.sendFile(path.resolve("public/pending.html")),
+    res.render("pending"),
   );
   app.get("/auth/login", (_req, res) =>
-    res.sendFile(path.resolve("public/login.html")),
+    res.render("login"),
   );
   app.use(
     "/vendor/qrcode",
@@ -136,11 +138,7 @@ export function createApp() {
   );
   app.use(express.static(path.resolve("public")));
   app.get("/auth/qrcode/complete", (_req, res) =>
-    res
-      .type("html")
-      .send(
-        `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/css/showcase.css"></head><body><main class="legacy-status-page"><div class="legacy-status-message"><h1>Success</h1><p>You've been authenticated</p><span class="legacy-status-success" aria-hidden="true"></span></div></main></body></html>`,
-      ),
+    res.render("qr-complete"),
   );
   app.get("/auth/error", authError);
   app.get("/user/info", userInfo);

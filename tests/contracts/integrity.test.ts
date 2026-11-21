@@ -1,11 +1,9 @@
 import { test, expect } from "vitest";
 import { startApp, freePort } from "../helpers/processes";
-import { startRedis } from "../helpers/redis";
 import { startProvider } from "../helpers/provider";
 import { configFixture } from "../helpers/config";
 test("Integrity bypass flow retains safe responses, bounded parser and single-use exchange", async () => {
-  const redis = await startRedis(),
-    provider = await startProvider();
+  const provider = await startProvider();
   const config = configFixture({
     auth_servers: [{ id: "stage", url: provider.url }],
     play_integrity_verify_domains: [],
@@ -14,7 +12,6 @@ test("Integrity bypass flow retains safe responses, bounded parser and single-us
   const app = await startApp({
     PORT: String(port),
     NODE_CONFIG_DIR: config.dir,
-    REDIS_URL: redis.url,
     PLAY_INTEGRITY_ENABLED: "true",
     PLAY_INTEGRITY_PACKAGE_NAME: "com.fixture.app",
     PLAY_INTEGRITY_USER_FLOW: "pvn_ip",
@@ -61,6 +58,5 @@ test("Integrity bypass flow retains safe responses, bounded parser and single-us
     await app.stop();
     config.remove();
     await provider.stop();
-    await redis.stop();
   }
 });

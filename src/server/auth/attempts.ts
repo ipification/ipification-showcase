@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { getRedis, key } from "@/server/store/redis";
+import { memoryStore } from "@/server/store/memory";
 import { AuthAttemptError } from "@/server/shared/errors";
 import type { AuthFailureReason } from "@/shared/auth-failures";
 export const AUTH_ATTEMPT_MS = 300000;
@@ -79,32 +79,7 @@ export interface AuthAttemptRepository {
   finishCompletion(state: string, failed?: boolean): Promise<void>;
 }
 
-// Attempt lifecycle: prepared -> started -> processing -> completed/failed
-// -> completing -> consumed. Status polling reads the same record without claiming it.
-// All expiry, binding and phase checks happen in the same Redis operation as the claim.
-// This prevents concurrent callbacks or completions from claiming the same attempt.
-const transitionScript = `
-local raw=redis.call('GET',KEYS[1]); if not raw then return cjson.encode({error='AUTH_STATE_INVALID'}) end
-local a=cjson.decode(raw)
-if a.expiresAt<=tonumber(ARGV[1]) then return cjson.encode({error='AUTH_STATE_EXPIRED'}) end
-local expected=cjson.decode(ARGV[2]); for k,v in pairs(expected) do if a[k]~=v then return cjson.encode({error='AUTH_STATE_INVALID'}) end end
-local mode=ARGV[5]
-if mode=='start' and not a.qr and a.ownerHash~=ARGV[6] then return cjson.encode({error='AUTH_STATE_INVALID'}) end
-if mode=='backchannel' and (a.qr or (a.userFlow~='pvn_im' and a.userFlow~='login_im')) then return cjson.encode({error='AUTH_STATE_INVALID'}) end
-if mode=='callback' and a.status=='processing' and a.backchannelProcessing then return cjson.encode(a) end
-if mode=='callback' and a.status=='completed' and a.backchannelCompleted and not a.browserReturned then
- a.browserReturned=true; redis.call('SET',KEYS[1],cjson.encode(a),'KEEPTTL'); return cjson.encode(a)
-end
-local phases=cjson.decode(ARGV[3]); local allowed=#phases==0
-for _,p in ipairs(phases) do if a.status==p then allowed=true end end
-if not allowed then return cjson.encode({error='AUTH_STATE_REPLAYED'}) end
-local changes=cjson.decode(ARGV[4])
--- Only a successful first QR start opens its completion window; replay cannot extend it.
-if mode=='start' and a.qr then changes.expiresAt=tonumber(ARGV[1])+${AUTH_ATTEMPT_MS} end
-for k,v in pairs(changes) do a[k]=v end
-if next(changes) then redis.call('SET',KEYS[1],cjson.encode(a),'KEEPTTL') end
-return cjson.encode(a)
-`;
+// Synchronous transitions are atomic within the demo's single Node.js process.
 async function transition(
   state: unknown,
   expected: Record<string, unknown>,
@@ -114,34 +89,53 @@ async function transition(
   owner = "",
 ): Promise<AuthAttempt> {
   if (!validState(state)) throw new AuthAttemptError("AUTH_STATE_INVALID");
-  const raw = await (
-    await getRedis()
-  ).eval(transitionScript, {
-    keys: [key("oauth:" + state)],
-    arguments: [
-      String(Date.now()),
-      JSON.stringify(expected),
-      JSON.stringify(phases),
-      JSON.stringify(changes),
-      mode,
-      owner,
-    ],
-  });
-  const value = JSON.parse(String(raw));
-  if (value.error) throw new AuthAttemptError(value.error);
-  return value as AuthAttempt;
+  const key = "oauth:" + state;
+  const value = memoryStore.get<AuthAttempt>(key);
+  if (!value) throw new AuthAttemptError("AUTH_STATE_INVALID");
+  if (value.expiresAt <= Date.now())
+    throw new AuthAttemptError("AUTH_STATE_EXPIRED");
+  for (const [name, expectedValue] of Object.entries(expected))
+    if ((value as unknown as Record<string, unknown>)[name] !== expectedValue)
+      throw new AuthAttemptError("AUTH_STATE_INVALID");
+  if (mode === "start" && !value.qr && value.ownerHash !== owner)
+    throw new AuthAttemptError("AUTH_STATE_INVALID");
+  if (
+    mode === "backchannel" &&
+    (value.qr || !["pvn_im", "login_im"].includes(value.userFlow))
+  )
+    throw new AuthAttemptError("AUTH_STATE_INVALID");
+  if (
+    mode === "callback" &&
+    value.status === "processing" &&
+    value.backchannelProcessing
+  )
+    return value;
+  if (
+    mode === "callback" &&
+    value.status === "completed" &&
+    value.backchannelCompleted &&
+    !value.browserReturned
+  ) {
+    value.browserReturned = true;
+    memoryStore.set(key, value, memoryStore.remaining(key));
+    return value;
+  }
+  if (phases.length && !phases.includes(value.status))
+    throw new AuthAttemptError("AUTH_STATE_REPLAYED");
+  if (mode === "start" && value.qr)
+    changes.expiresAt = Date.now() + AUTH_ATTEMPT_MS;
+  Object.assign(value, changes);
+  if (Object.keys(changes).length)
+    memoryStore.set(key, value, memoryStore.remaining(key));
+  return value;
 }
 export const authAttempts: AuthAttemptRepository = {
   async create(value) {
     if (!validState(value.state))
       throw new AuthAttemptError("AUTH_STATE_INVALID");
-    const saved = await (
-      await getRedis()
-    ).set(key("oauth:" + value.state), JSON.stringify(value), {
-      NX: true,
-      PX: AUTH_ATTEMPT_MS * 2,
-    });
-    if (!saved) throw new AuthAttemptError("AUTH_STATE_REPLAYED");
+    const key = "oauth:" + value.state;
+    if (memoryStore.get(key)) throw new AuthAttemptError("AUTH_STATE_REPLAYED");
+    memoryStore.set(key, value, AUTH_ATTEMPT_MS * 2);
   },
   start(state, match, owner, callback) {
     // QR deliberately starts on a different browser; direct navigation must match its initiator.

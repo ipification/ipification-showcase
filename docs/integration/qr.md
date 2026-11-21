@@ -7,7 +7,7 @@ QR connects two separate browser contexts. The desktop prepares the attempt and 
 ```mermaid
 sequenceDiagram
     participant D as Desktop browser
-    participant S as Showcase backend and Redis
+    participant S as Showcase backend and process memory
     participant P as Phone browser
     participant I as IPification
     D->>S: POST /auth/prepare (qr=true)
@@ -34,3 +34,5 @@ For local testing, open the desktop app with a LAN IP or hostname reachable from
 See [QR polling implementation](../../public/js/qr.js) and [pending-page polling](../../public/js/pending.js), [QR dialog](../../public/js/qr.js), [attempt storage](../../src/server/auth/attempts.ts), and [status handler](../../src/server/auth/web.ts).
 
 The phone result page currently treats the string `"false"` as failure but boolean `false` as success, while the desktop result preserves and displays the original userinfo. This legacy-compatible behavior is covered by a contract test; do not use the phone result page as the verification decision. Apply your own provider-claim policy.
+
+The demo keeps state in the single running process. A restart clears pending attempts and sessions; multiple instances cannot share this state.

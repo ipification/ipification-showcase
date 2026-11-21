@@ -1,10 +1,8 @@
 import { test, expect } from "vitest";
 import { startApp } from "../helpers/processes";
-import { startRedis } from "../helpers/redis";
 import { configFixture } from "../helpers/config";
 
 test("production derives QR and provider callback origins per request behind an HTTPS ingress", async () => {
-  const redis = await startRedis();
   const config = configFixture();
   let app: Awaited<ReturnType<typeof startApp>> | undefined;
   try {
@@ -12,8 +10,6 @@ test("production derives QR and provider callback origins per request behind an 
       NODE_ENV: "production",
       NODE_CONFIG_DIR: config.dir,
       TRUST_PROXY_HOPS: "1",
-      REDIS_URL: redis.url,
-      SHOWCASE_KEY_PREFIX: "production-origin:",
     });
     for (const origin of [
       "https://showcase-one.example",
@@ -73,6 +69,5 @@ test("production derives QR and provider callback origins per request behind an 
   } finally {
     await app?.stop();
     config.remove();
-    await redis.stop();
   }
 });
