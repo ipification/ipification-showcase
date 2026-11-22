@@ -41,11 +41,6 @@ export function showSms(client, token, { phone, server, endFlow, jsonPost }) {
         { ...auth, client_id: client.client_id, server_id: server, code },
         controller.signal,
       );
-      await jsonPost(
-        "/sms/log",
-        { data: { type: "get_token_response", data } },
-        controller.signal,
-      );
       if (!response.ok)
         throw new Error(
           data.data?.error_description ||

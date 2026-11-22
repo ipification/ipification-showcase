@@ -2,6 +2,11 @@ import { test, expect } from "@playwright/test";
 test("TS43 sends credential response to token endpoint and renders results", async ({
   page,
 }) => {
+  let diagnosticsRequests = 0;
+  await page.route("**/ts43/log", (route) => {
+    diagnosticsRequests++;
+    return route.abort();
+  });
   await page.addInitScript(() => {
     Object.defineProperty(window, "DigitalCredential", {
       configurable: true,
@@ -27,6 +32,7 @@ test("TS43 sends credential response to token endpoint and renders results", asy
   expect((await authRequest).postDataJSON().server_id).toBe("secondary");
   expect((await tokenRequest).postDataJSON().server_id).toBe("secondary");
   await expect(page).toHaveURL(/\/user\/info$/);
+  expect(diagnosticsRequests).toBe(0);
 });
 test("null credentials show cancellation and keep login available", async ({
   page,

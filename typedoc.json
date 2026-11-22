@@ -1,0 +1,26 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "IPification Showcase API Reference",
+  "entryPoints": [
+    "src/modules/browser-auth/web.ts",
+    "src/modules/mobile/controller.ts",
+    "src/modules/s2s/controller.ts",
+    "src/modules/sms/controller.ts",
+    "src/modules/sim/controller.ts",
+    "src/modules/play-integrity/handlers.ts",
+    "src/modules/play-integrity/input.ts",
+    "src/modules/showcase/config.ts",
+    "src/modules/showcase/geoip.ts",
+    "src/shared/contracts.ts"
+  ],
+  "entryPointStrategy": "resolve",
+  "excludeInternal": true,
+  "excludeNotDocumented": true,
+  "excludeNotDocumentedKinds": ["Function", "Interface", "TypeAlias"],
+  "readme": "docs/reference/README.md",
+  "out": "docs/generated/reference",
+  "disableSources": true,
+  "searchInComments": true,
+  "highlightLanguages": ["http", "json", "javascript", "typescript"],
+  "treatWarningsAsErrors": true
+}

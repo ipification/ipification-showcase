@@ -2,7 +2,7 @@ import * as provider from "./provider";
 import {
   sessionRepository,
   type SessionRepository,
-} from "@/modules/browser-auth/repositories";
+} from "@/shared/server/session/store";
 import {
   resolveServer,
   resolveClient,

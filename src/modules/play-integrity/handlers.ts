@@ -1,3 +1,5 @@
+/** @module Play Integrity */
+
 import { randomUUID } from "node:crypto";
 import { resolveContext } from "@/shared/server/http/context";
 import { readBody } from "@/shared/server/http/body";
@@ -13,6 +15,22 @@ const denialStatus: Record<IntegrityCategory, number> = {
   unavailable: 503,
   exchange: 401,
 };
+/**
+ * Handles Android Play Integrity attempts, verification and code exchange.
+ *
+ * @remarks
+ * - `POST /api/play-integrity/attempt` accepts `phone_number` and `server_id`.
+ *   HTTP 201 returns `attempt_id`, `request_hash` and `expires_at`.
+ * - `POST /api/play-integrity/verify` accepts `attempt_id` and `integrity_token`.
+ *   HTTP 201 returns the signed `state` and `expires_at` after verification.
+ * - `POST /api/play-integrity/token-exchange` accepts `code` and signed `state`.
+ *   HTTP 200 returns `decision: "allow"` and `user_info`.
+ *
+ * @param request - The incoming JSON request. The handler limits its body to 16 KiB.
+ * @param endpoint - Operation selected by the Express route.
+ * @returns The operation result, or an error envelope with `request_id`,
+ *   `decision` and `reason_codes`.
+ */
 export async function handleIntegrity(
   request: Request,
   endpoint: IntegrityEndpoint,

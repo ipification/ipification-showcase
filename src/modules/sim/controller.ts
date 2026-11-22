@@ -1,3 +1,5 @@
+/** @module SIM verification */
+
 import { sessionId } from "@/shared/server/session/cookies";
 import { requestFailure } from "@/shared/server/http/response";
 import { cibaService } from "@/shared/server/ciba/service";
@@ -13,6 +15,15 @@ import {
   checkAuthLimit,
 } from "@/shared/server/storage/rate-limit";
 
+/**
+ * `POST /ts43/auth` prepares a SIM credential request.
+ *
+ * @param request - Send `client_id`, `server_id`, `login_hint`, `carrier_hint`,
+ *   `scope`, and the flow-specific `operation` when applicable.
+ * @returns HTTP 200 with `auth_server`, `auth_req_id`, `nonce` and
+ *   `digital_request` on success. Pass the digital request to a browser that
+ *   supports the SIM credential protocol. Rate limiting returns 429.
+ */
 export async function createSimCredentialRequest(request: Request) {
   let context,
     input,
@@ -37,6 +48,14 @@ export async function createSimCredentialRequest(request: Request) {
   }
 }
 
+/**
+ * `POST /ts43/token` exchanges the browser's SIM credential for provider claims.
+ *
+ * @param request - Send `vp_token`, `client_id`, `server_id`, `auth_req_id`
+ *   and `nonce` for the request from {@link createSimCredentialRequest}.
+ * @returns HTTP 200 with `auth_server` and provider claims on success. Inspect
+ *   the response status and claims before treating the SIM as verified.
+ */
 export async function exchangeSimCredential(request: Request) {
   let context, input;
   try {

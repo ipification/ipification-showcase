@@ -1,31 +1,35 @@
-import { test, expect } from "vitest";
+import { expect, test } from "vitest";
 import { createAuthResultStore } from "@/shared/server/storage/auth-results";
-test("result writes remain sequential and total miss retains five reads and sleeps", async () => {
-  const operations: string[] = [];
-  const store = createAuthResultStore(
-    {
-      take: () => null,
-      get: async () => {
-        operations.push("read");
-        return null;
-      },
-      set: async (key) => {
-        operations.push(key);
-      },
-    },
-    async () => {
-      operations.push("sleep");
-    },
+import { MemoryStore } from "@/shared/server/storage/memory";
+
+const display = {
+  userInfo: { sub: "fixture" },
+  state: "s",
+  client_id: "c",
+  client_title: "Phone",
+};
+
+function setup() {
+  const memory = new MemoryStore(1);
+  const results = createAuthResultStore(memory);
+  return { memory, results };
+}
+
+test("one free cache slot fits both result views and S2S consumption preserves display", async () => {
+  const { results } = setup();
+  await results.saveResult("s", display);
+  expect(await results.readDisplayResult("s")).toEqual(display);
+  expect(await results.consumeUserInfo("s")).toEqual(display.userInfo);
+  expect(await results.consumeUserInfo("s")).toBeUndefined();
+  expect(await results.readDisplayResult("s")).toEqual(display);
+});
+
+test("a rejected result write leaves neither view in a full cache", async () => {
+  const { memory, results } = setup();
+  memory.set("other", true, 600000);
+  await expect(results.saveResult("s", display)).rejects.toThrow(
+    "STORE_CAPACITY",
   );
-  await store.saveResult(
-    "s",
-    { userInfo: {}, state: "s", client_id: "c", client_title: "Phone" },
-    {},
-  );
-  expect(operations).toEqual(["s", "s-user-info"]);
-  operations.length = 0;
-  expect(await store.waitForResult()).toBeUndefined();
-  expect(operations).toEqual(
-    Array.from({ length: 5 }, () => ["read", "sleep"]).flat(),
-  );
+  expect(await results.readDisplayResult("s")).toBeUndefined();
+  expect(await results.consumeUserInfo("s")).toBeUndefined();
 });

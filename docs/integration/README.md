@@ -16,10 +16,12 @@ This guide is the starting point for the Express showcase documentation. It expl
 
 [Run the demo](running.md) · [Showcase HTTP endpoints](api.md)
 
+Run `npm run docs:build` from the repository root to generate the searchable handler and type reference. Open `docs/generated/reference/index.html`. [Reference overview](../reference/README.md)
+
 ## Read the source
 
 - **Screen:** [showcase entry](../../public/js/showcase.js), [routes](../../src/modules/showcase/routes.ts) and [views](../../src/views/showcase).
-- **Browser authorization:** [browser routes](../../src/modules/browser-auth/routes.ts) → [web handlers](../../src/modules/browser-auth/web.ts) → [auth service](../../src/modules/browser-auth/service.ts) → [provider calls](../../src/modules/browser-auth/provider.ts). [Attempt storage](../../src/modules/browser-auth/attempts.ts) handles bindings, expiry and concurrent callbacks.
+- **Browser authorization:** [browser routes](../../src/modules/browser-auth/routes.ts) → [web handlers](../../src/modules/browser-auth/web.ts) → [auth service](../../src/modules/browser-auth/service.ts) → [authorization URL builder](../../src/modules/browser-auth/provider.ts) and [code exchange](../../src/shared/server/common/authorization-code.ts). [Attempt storage](../../src/modules/browser-auth/attempts.ts) handles bindings, expiry and concurrent callbacks.
 - **QR:** [QR UI and polling](../../public/js/flows/qr.js) → browser auth status and completion routes. The [pending page](../../public/js/pending.js) also polls status for applicable IM flows.
 - **SMS:** [SMS UI](../../public/js/flows/sms.js) → [routes](../../src/modules/sms/routes.ts) → [controller](../../src/modules/sms/controller.ts) → [shared CIBA service](../../src/shared/server/ciba/service.ts) and [provider calls](../../src/shared/server/ciba/provider.ts).
 - **SIM:** [SIM UI](../../public/js/flows/sim.js) → [routes](../../src/modules/sim/routes.ts) → [controller](../../src/modules/sim/controller.ts) → the shared CIBA service and provider. SIM has its own credential and rate-limit steps.

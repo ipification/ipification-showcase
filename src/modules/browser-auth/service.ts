@@ -1,27 +1,22 @@
 import { randomUUID } from "node:crypto";
-import * as provider from "./provider";
+import { buildAuthorizationUrl } from "./provider";
+import { exchangeAuthorizationCode } from "@/shared/server/common/authorization-code";
+import { validState } from "@/shared/server/storage/auth-state";
+import { authResultStore } from "@/shared/server/storage/auth-results";
 import {
-  authResultRepository,
   sessionRepository,
-  type AuthResultRepository,
   type SessionRepository,
-} from "./repositories";
+} from "@/shared/server/session/store";
 import {
   resolveClient,
   resolveServer,
   AuthAttemptError,
 } from "@/shared/server/common/errors";
 import type { ServiceContext } from "@/shared/server/common/context";
-import type {
-  CallbackInput,
-  MobileInput,
-  StartInput,
-  PrepareInput,
-} from "./input";
+import type { CallbackInput, StartInput, PrepareInput } from "./input";
 import {
   authAttempts,
   bindingHash,
-  validState,
   AUTH_ATTEMPT_MS,
   QR_SCAN_MS,
   type AuthAttemptRepository,
@@ -48,11 +43,11 @@ function callbackMessage(error: unknown, description: unknown) {
   );
 }
 interface Dependencies {
-  provider: Pick<
-    typeof provider,
-    "buildAuthorizationUrl" | "exchangeAuthorizationCode"
-  >;
-  results: AuthResultRepository;
+  provider: {
+    buildAuthorizationUrl: typeof buildAuthorizationUrl;
+    exchangeAuthorizationCode: typeof exchangeAuthorizationCode;
+  };
+  results: Pick<typeof authResultStore, "saveResult" | "readDisplayResult">;
   sessions: SessionRepository;
   attempts: AuthAttemptRepository;
   id: () => string;
@@ -65,8 +60,8 @@ export type CallbackOutcome =
   | { kind: "redirect"; url: string };
 export function createAuthService(overrides: Partial<Dependencies> = {}) {
   const ports: Dependencies = {
-    provider,
-    results: authResultRepository,
+    provider: { buildAuthorizationUrl, exchangeAuthorizationCode },
+    results: authResultStore,
     sessions: sessionRepository,
     attempts: authAttempts,
     id: randomUUID,
@@ -220,17 +215,13 @@ export function createAuthService(overrides: Partial<Dependencies> = {}) {
           code: input.code,
           browser: { state: attempt.state, nonce: attempt.nonce },
         }));
-        // 2. Store both result views before marking the attempt terminal for status polling.
-        await ports.results.saveResult(
-          attempt.state,
-          {
-            userInfo,
-            client_id: client!.client_id,
-            client_title: client!.title || "",
-            state: attempt.state,
-          },
+        // 2. Save the result before marking the attempt terminal for status polling.
+        await ports.results.saveResult(attempt.state, {
           userInfo,
-        );
+          client_id: client!.client_id,
+          client_title: client!.title || "",
+          state: attempt.state,
+        });
         await ports.attempts.finishCallback(
           attempt.state,
           undefined,
@@ -290,7 +281,7 @@ export function createAuthService(overrides: Partial<Dependencies> = {}) {
           attempt.failure.status,
           attempt.failure.providerCode,
         );
-      const result = await ports.results.waitForResult(attempt.state);
+      const result = await ports.results.readDisplayResult(attempt.state);
       if (!result) throw new AuthAttemptError("AUTH_STATE_INVALID");
       // Same demo display-session policy as before; the attempt adds ownership/single use only.
       const id = await ports.sessions.create(
@@ -339,33 +330,12 @@ export function createAuthService(overrides: Partial<Dependencies> = {}) {
     };
   }
 
-  async function exchangeMobileCode(
-    context: ServiceContext,
-    input: MobileInput,
-  ) {
-    const server = resolveServer(context, input.server_id),
-      client = resolveClient(context, { id: input.client_id });
-    const { userInfo } = await ports.provider.exchangeAuthorizationCode({
-      server,
-      realm: context.config.realm,
-      clientId: client.client_id,
-      clientSecret: client.client_secret,
-      redirectUri: input.redirect_uri,
-      code: input.code,
-    });
-    return { server, userInfo };
-  }
-  function readS2sResult(state: unknown) {
-    return ports.results.getUserInfo(state);
-  }
   return {
     prepareWebAuthentication,
     startWebAuthentication,
     handleAuthorizationCallback,
     completeWebAuthentication,
     getAuthenticationStatus,
-    exchangeMobileCode,
-    readS2sResult,
   };
 }
 export const authService = createAuthService();

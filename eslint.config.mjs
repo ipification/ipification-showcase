@@ -7,6 +7,7 @@ export default defineConfig([
     ".local-backups/**",
     "test-results/**",
     "playwright-report/**",
+    "docs/generated/reference/**",
   ]),
   ...tseslint.configs.recommended,
   { rules: { "@typescript-eslint/no-explicit-any": "off" } },

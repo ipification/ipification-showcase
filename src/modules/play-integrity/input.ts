@@ -1,3 +1,8 @@
+/** @module Play Integrity operations */
+
+/**
+ * Server-side operation selected by a Play Integrity route.
+ */
 export type IntegrityEndpoint = "attempt" | "verify" | "token-exchange";
 export interface CreateAttemptInput {
   kind: "attempt";
@@ -18,6 +23,7 @@ export type IntegrityInput =
   CreateAttemptInput | VerifyAttemptInput | ExchangeCodeInput;
 const nonempty = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0;
+/** @internal */
 export function decodeIntegrity(
   endpoint: IntegrityEndpoint,
   body: Record<string, unknown>,

@@ -30,6 +30,6 @@ if (!response.ok) throw new Error('SIM verification failed');
 const userInfo = await response.json();
 ```
 
-`/ts43/auth` is rate limited and may return 429 with `Retry-After`. Handle unavailable/cancelled credentials, provider errors and expired attempts. The demo submits the callback best-effort before token exchange; its display session can hold error data, so do not equate session existence with verification success. The demo currently navigates to its result page even if `/ts43/token` returned an error; integrations should check the response explicitly, as above. `/ts43/log` is diagnostic only and should not receive sensitive data.
+`/ts43/auth` is rate limited and may return 429 with `Retry-After`. Handle unavailable/cancelled credentials, provider errors and expired attempts. The demo submits the callback best-effort before token exchange; its display session can hold error data, so do not equate session existence with verification success. The demo currently navigates to its result page even if `/ts43/token` returned an error; integrations should check the response explicitly, as above. `/ts43/log` is retained for compatibility. The browser flow no longer sends token responses to it.
 
 See [SIM browser flow](../../public/js/flows/sim.js), [CIBA handler](../../src/modules/sim/controller.ts), and [provider requests](../../src/shared/server/ciba/provider.ts).

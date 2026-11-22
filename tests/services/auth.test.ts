@@ -3,19 +3,14 @@ import { createAuthService } from "@/modules/browser-auth/service";
 import { decodePrepare } from "@/modules/browser-auth/input";
 import type { AuthAttempt } from "@/modules/browser-auth/attempts";
 import { serviceContext as context } from "../helpers/service-context";
-import {
-  decodeStart,
-  decodeCallback,
-  decodeMobile,
-} from "@/modules/browser-auth/input";
+import { decodeStart, decodeCallback } from "@/modules/browser-auth/input";
 function setup() {
   const calls: string[] = [];
   const results = {
     saveResult: vi.fn(async () => {
       calls.push("save");
     }),
-    waitForResult: vi.fn(async () => undefined),
-    getUserInfo: vi.fn(async () => undefined),
+    readDisplayResult: vi.fn(async () => undefined),
   };
   const sessions = {
     read: vi.fn(async () => null),
@@ -186,7 +181,7 @@ test("bound provider cancellation adopts the existing session without provider c
   );
   expect(s.provider.exchangeAuthorizationCode).not.toHaveBeenCalled();
 });
-test("store failures propagate; mobile passes submitted redirect and S2S stays a repository read", async () => {
+test("callback result store failures propagate", async () => {
   const s = setup();
   s.results.saveResult.mockRejectedValueOnce(new Error("offline"));
   await expect(
@@ -199,20 +194,6 @@ test("store failures propagate; mobile passes submitted redirect and S2S stays a
       callbackBinding: "callback",
     }),
   ).rejects.toThrow("offline");
-  await s.service.exchangeMobileCode(
-    context,
-    decodeMobile({
-      client_id: "client",
-      redirect_uri: "demo://callback",
-      code: "c",
-    }),
-  );
-  expect(s.provider.exchangeAuthorizationCode).toHaveBeenLastCalledWith(
-    expect.objectContaining({ redirectUri: "demo://callback" }),
-  );
-  await s.service.readS2sResult("s");
-  await s.service.readS2sResult("s");
-  expect(s.results.getUserInfo).toHaveBeenCalledTimes(2);
 });
 
 test("completion creates a replacement authenticated session only after a stored result is found", async () => {
@@ -230,7 +211,7 @@ test("completion creates a replacement authenticated session only after a stored
   const service = createAuthService({
     attempts: s.attempts,
     sessions: s.sessions,
-    results: { ...s.results, waitForResult: async () => result },
+    results: { ...s.results, readDisplayResult: async () => result },
   });
   expect(
     await service.completeWebAuthentication(context, "s", "old", "owner"),

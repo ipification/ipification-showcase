@@ -16,3 +16,5 @@ playwright-report
 *.tsbuildinfo
 .local-backups
 .superpowers
+
+docs/generated/reference

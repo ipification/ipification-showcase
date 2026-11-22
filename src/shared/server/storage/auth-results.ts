@@ -1,44 +1,37 @@
-import { memoryStore } from "./memory";
-import type { DisplayResult, UserInfo } from "@/shared/contracts";
-type Store = {
-  get: (key: string) => Promise<DisplayResult | UserInfo | null>;
-  take: (key: string) => DisplayResult | UserInfo | null;
-  set: (key: string, value: DisplayResult | UserInfo) => Promise<unknown>;
-};
+import type { DisplayResult } from "@/shared/contracts";
+import { memoryStore, type MemoryStore } from "./memory";
+
+const RESULT_TTL_MS = 600000;
+
+interface StoredResult {
+  display: DisplayResult;
+  availableForS2s: boolean;
+}
+
 export function createAuthResultStore(
-  store: Store,
-  delay: (ms: number) => Promise<void> = (ms) =>
-    new Promise((r) => setTimeout(r, ms)),
+  store: Pick<MemoryStore, "get" | "set" | "remaining">,
 ) {
   return {
-    // Keep the display metadata and the provider userinfo separately: the result
-    // page reads the former, while the legacy S2S endpoint reads the latter.
-    async saveResult(state: unknown, result: DisplayResult, raw: UserInfo) {
-      await store.set(String(state), result);
-      await store.set(`${state}-user-info`, raw);
+    async saveResult(state: string, display: DisplayResult) {
+      store.set(
+        "result:" + state,
+        { display, availableForS2s: true } satisfies StoredResult,
+        RESULT_TTL_MS,
+      );
     },
-    async waitForResult(state?: unknown): Promise<DisplayResult | undefined> {
-      for (let i = 0; i <= 4; i++) {
-        const value = await store.get(String(state || ""));
-        if (value) return value as DisplayResult;
-        await delay(1000);
-      }
-      return undefined;
+    async readDisplayResult(state: string) {
+      return store.get<StoredResult>("result:" + state)?.display;
     },
-    async getUserInfo(state?: unknown): Promise<UserInfo | undefined> {
-      return (store.take(`${state}-user-info`) as UserInfo) || undefined;
+    async consumeUserInfo(state: string) {
+      const key = "result:" + state;
+      const result = store.get<StoredResult>(key);
+      if (!result?.availableForS2s) return undefined;
+      // Keep the claim synchronous and preserve the original expiry.
+      result.availableForS2s = false;
+      store.set(key, result, store.remaining(key));
+      return result.display.userInfo;
     },
   };
 }
-const store = createAuthResultStore({
-  async get(id) {
-    return memoryStore.get<DisplayResult | UserInfo>("result:" + id) ?? null;
-  },
-  take(id) {
-    return memoryStore.take<DisplayResult | UserInfo>("result:" + id) ?? null;
-  },
-  async set(id, value) {
-    memoryStore.set("result:" + id, value, 600000);
-  },
-});
-export const { saveResult, waitForResult, getUserInfo } = store;
+
+export const authResultStore = createAuthResultStore(memoryStore);

@@ -11,12 +11,6 @@ export const decodeCallback = (input: Record<string, unknown>) => ({
   error: input.error,
   error_description: input.error_description,
 });
-export const decodeMobile = (input: Record<string, unknown>) => ({
-  client_id: input.client_id,
-  server_id: input.server_id,
-  code: input.code,
-  redirect_uri: input.redirect_uri,
-});
 export type StartInput = ReturnType<typeof decodeStart>;
 export const decodePrepare = (input: Record<string, unknown>) => ({
   ...decodeStart(input),
@@ -30,4 +24,3 @@ export type CallbackInput = ReturnType<typeof decodeCallback> & {
   backchannel: boolean;
   callbackBinding: string;
 };
-export type MobileInput = ReturnType<typeof decodeMobile>;

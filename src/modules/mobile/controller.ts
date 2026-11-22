@@ -1,3 +1,5 @@
+/** @module Mobile code exchange */
+
 import { resolveContext } from "@/shared/server/http/context";
 import { readBody } from "@/shared/server/http/body";
 import { json, requestFailure } from "@/shared/server/http/response";
@@ -5,9 +7,41 @@ import {
   ApplicationError,
   providerFailure,
 } from "@/shared/server/common/errors";
-import { authService } from "@/modules/browser-auth/service";
-import { decodeMobile } from "@/modules/browser-auth/input";
+import { decodeMobile, exchangeMobileAuthorizationCode } from "./service";
 import { checkAuthLimit } from "@/shared/server/storage/rate-limit";
+/**
+ * `POST /auth/mobile/login` exchanges a mobile authorization code and returns provider claims.
+ *
+ * @remarks
+ * Send JSON with `client_id`, `code` and the original `redirect_uri`. An omitted
+ * `server_id` selects the first configured server. The handler does not create a
+ * browser session or store a result for S2S. Treat the returned claims as
+ * provider-specific and keep the authorization code confidential.
+ *
+ * @param request - The incoming Showcase HTTP request.
+ * @returns HTTP 200 with `auth_server` and provider claims. An unknown server
+ *   returns 400. An unknown client or a failed exchange returns 401. Rate
+ *   limiting returns 429 with `Retry-After`.
+ *
+ * @example
+ * ```http
+ * POST /auth/mobile/login
+ * Content-Type: application/json
+ *
+ * {
+ *   "client_id": "<configured-client-id>",
+ *   "server_id": "stage",
+ *   "code": "<authorization-code>",
+ *   "redirect_uri": "<registered-redirect-uri>"
+ * }
+ * ```
+ *
+ * Example response for HTTP 200. Claims vary with the provider and scope.
+ *
+ * ```json
+ * {"auth_server": {"id": "stage", "url": "https://auth.example"}, "sub": "<subject>"}
+ * ```
+ */
 export async function exchangeMobileCode(request: Request) {
   let context, input;
   try {
@@ -21,7 +55,7 @@ export async function exchangeMobileCode(request: Request) {
   }
   try {
     // Return the exchanged user info directly; this mobile API does not set a browser session.
-    const { server, userInfo } = await authService.exchangeMobileCode(
+    const { server, userInfo } = await exchangeMobileAuthorizationCode(
       context,
       input,
     );

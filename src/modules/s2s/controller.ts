@@ -1,9 +1,38 @@
+/** @module Server-to-server results */
+
 import { readBody } from "@/shared/server/http/body";
-import { authService } from "@/modules/browser-auth/service";
+import { authResultStore } from "@/shared/server/storage/auth-results";
 import { json, requestFailure } from "@/shared/server/http/response";
-import { validState } from "@/modules/browser-auth/attempts";
+import { validState } from "@/shared/server/storage/auth-state";
 import { resolveContext } from "@/shared/server/http/context";
 import { checkAuthLimit } from "@/shared/server/storage/rate-limit";
+/**
+ * `POST /auth/s2s/signin` reads userinfo stored by a successful browser callback.
+ *
+ * @remarks
+ * Send the browser attempt's `state`. A successful read consumes this result for
+ * S2S, within a ten-minute window. Keep `state` confidential and protect access
+ * to this demo endpoint with your service authentication policy.
+ *
+ * @param request - The incoming Showcase HTTP request.
+ * @returns HTTP 200 with the raw provider claims, an empty 401 when the result
+ *   is missing, used or expired, or 429 with `Retry-After` when rate limited.
+ *   Check the status before parsing JSON.
+ *
+ * @example
+ * ```http
+ * POST /auth/s2s/signin
+ * Content-Type: application/json
+ *
+ * { "state": "<browser-attempt-state>" }
+ * ```
+ *
+ * Example response for HTTP 200. Claims vary with the provider and scope.
+ *
+ * ```json
+ * {"sub": "<subject>", "phone_number_verified": true}
+ * ```
+ */
 async function readS2sResult(request: Request) {
   try {
     const body = await readBody(request);
@@ -12,7 +41,7 @@ async function readS2sResult(request: Request) {
       return json({ error: "RATE_LIMITED" }, 429, limit.headers);
     // Read the result already saved by the callback; do not exchange a code again.
     const user = validState(body.state)
-      ? await authService.readS2sResult(body.state)
+      ? await authResultStore.consumeUserInfo(body.state)
       : undefined;
     return user ? json(user) : new Response(null, { status: 401 });
   } catch (error) {

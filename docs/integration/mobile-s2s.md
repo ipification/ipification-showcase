@@ -103,6 +103,6 @@ The mobile code exchange and Play Integrity code exchange still use a generic gr
 
 ## Source and tests
 
-- [Mobile handler](../../src/modules/mobile/controller.ts) and [auth service](../../src/modules/browser-auth/service.ts).
+- [Mobile handler](../../src/modules/mobile/controller.ts) and [mobile code exchange](../../src/modules/mobile/service.ts).
 - [S2S handler](../../src/modules/s2s/controller.ts) and [in-memory result store](../../src/shared/server/storage/auth-results.ts).
 - [Mobile and S2S contracts](../../tests/contracts/mobile-s2s.test.ts) and [web callback contracts](../../tests/contracts/web-auth.test.ts).

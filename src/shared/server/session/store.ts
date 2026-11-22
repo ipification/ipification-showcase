@@ -26,3 +26,13 @@ export async function consumeSessionError(id: string): Promise<string | null> {
   memoryStore.set(key, data, memoryStore.remaining(key));
   return error;
 }
+
+export interface SessionRepository {
+  read(id: string): Promise<SessionData | null>;
+  create(data: SessionData, previousId?: string): Promise<string>;
+}
+
+export const sessionRepository: SessionRepository = {
+  read: readSession,
+  create: createSession,
+};

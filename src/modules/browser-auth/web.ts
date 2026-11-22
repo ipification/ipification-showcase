@@ -1,3 +1,5 @@
+/** @module Browser authorization */
+
 import { resolveContext } from "@/shared/server/http/context";
 import { query, readBody } from "@/shared/server/http/body";
 import {
@@ -14,6 +16,14 @@ import { callbackFailure } from "./failure";
 import { AUTH_ATTEMPT_MS, QR_SCAN_MS } from "./attempts";
 import { authBinding, newBinding, setAuthBinding } from "./state-cookies";
 
+/**
+ * `POST /auth/prepare` creates a state for browser authorization.
+ *
+ * @param request - Send JSON with `user_flow`, `server_id`, a boolean `qr`
+ *   and `phone` for flows that expect an entered number.
+ * @returns HTTP 201 with `state`, `url` and `expiresAt`, plus an owner cookie.
+ *   Keep the cookie and use the returned URL for navigation or the QR code.
+ */
 export async function prepareWebAuthentication(request: Request) {
   try {
     const context = resolveContext(request);
@@ -52,6 +62,13 @@ export async function prepareWebAuthentication(request: Request) {
   }
 }
 
+/**
+ * `GET /auth/start` starts a prepared browser authorization attempt.
+ *
+ * @param request - Navigate to the exact URL returned by
+ *   {@link prepareWebAuthentication}. For QR, the phone opens that URL.
+ * @returns A redirect to the provider on success.
+ */
 export async function startWebAuthentication(request: Request) {
   try {
     const context = resolveContext(request),
@@ -86,6 +103,13 @@ export async function startWebAuthentication(request: Request) {
   }
 }
 
+/**
+ * `GET /auth/callback/:userFlow/:serverId` handles the authorization server's callback.
+ *
+ * @param request - The provider redirect with `state`, `code` or error fields.
+ * @returns A browser redirect, or an empty HTTP 200 for a successful IM
+ *   backchannel callback.
+ */
 export async function handleAuthorizationCallback(
   request: Request,
   { userFlow, serverId }: { userFlow: string; serverId: string },
@@ -163,6 +187,12 @@ export async function handleAuthorizationCallback(
   }
 }
 
+/**
+ * `GET /auth/complete?state=...` claims a finished browser attempt.
+ *
+ * @param request - Navigate to the completion URL using the owner browser.
+ * @returns A redirect and, on success, a display session cookie for `/user/info`.
+ */
 export async function completeWebAuthentication(request: Request) {
   try {
     const context = resolveContext(request),
@@ -196,6 +226,14 @@ export async function completeWebAuthentication(request: Request) {
   }
 }
 
+/**
+ * `GET /auth/status?state=...` checks the state of a browser attempt.
+ *
+ * @param request - The attempt state and the initiating browser's cookie.
+ * @returns HTTP 200 with `pending`, `completed`, `failed` or `finished` in
+ *   `status`. Follow `completionUrl` when provided for a completed or failed
+ *   attempt. Unavailable or invalid attempts return a non-success status.
+ */
 export async function getAuthenticationStatus(request: Request) {
   try {
     const context = resolveContext(request),

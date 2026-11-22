@@ -1,6 +1,15 @@
+/** @module Country lookup */
+
 import geoip from "geoip-lite";
 import { resolveContext } from "@/shared/server/http/context";
 import { json, unavailable } from "@/shared/server/http/response";
+/**
+ * `GET /api/geoip` suggests a country based on the resolved client IP.
+ *
+ * @param request - The incoming Showcase HTTP request.
+ * @returns HTTP 200 with `country` and `ip`. A lookup miss uses the configured
+ *   default country. Configuration failure returns 503.
+ */
 function getClientCountry(request: Request) {
   try {
     const context = resolveContext(request);

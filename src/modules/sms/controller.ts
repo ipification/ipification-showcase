@@ -1,3 +1,5 @@
+/** @module SMS verification */
+
 import { sessionId } from "@/shared/server/session/cookies";
 import { requestFailure } from "@/shared/server/http/response";
 import { json } from "@/shared/server/http/response";
@@ -10,6 +12,15 @@ import {
   operationFailure,
 } from "@/shared/server/ciba/handlers";
 
+/**
+ * `POST /sms/auth` starts a provider SMS challenge.
+ *
+ * @param request - Send `client_id`, `server_id`, `login_hint` and `scope` as
+ *   JSON. Use a normalized phone number for `login_hint`.
+ * @returns On success, HTTP 200 with `auth_server`, `auth_req_id` and `nonce`.
+ *   Save the request ID and nonce for {@link verifySmsCode}. Rate limiting
+ *   returns 429 with `Retry-After`.
+ */
 export async function sendSmsCode(request: Request) {
   let context, input;
   try {
@@ -28,6 +39,15 @@ export async function sendSmsCode(request: Request) {
   }
 }
 
+/**
+ * `POST /sms/token` submits the user's OTP and exchanges the SMS request.
+ *
+ * @param request - Send `client_id`, `server_id`, `code`, `auth_req_id` and
+ *   `nonce`. Reuse the values from {@link sendSmsCode} for this challenge.
+ * @returns HTTP 200 with `auth_server` and provider claims on success. Check
+ *   the status and claims before treating the phone as verified. The demo
+ *   may create a display session for an error response.
+ */
 export async function verifySmsCode(request: Request) {
   let context, input;
   try {

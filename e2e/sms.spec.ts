@@ -2,6 +2,11 @@ import { test, expect } from "@playwright/test";
 test("SMS dialog supports digit filtering, cancel and successful manual OTP", async ({
   page,
 }) => {
+  let diagnosticsRequests = 0;
+  await page.route("**/sms/log", (route) => {
+    diagnosticsRequests++;
+    return route.abort();
+  });
   await page.goto("/auth/login#pnv");
   await page.getByLabel("Phone number", { exact: true }).fill("2025550123");
   await page.getByRole("button", { name: "SMS", exact: true }).click();
@@ -13,6 +18,7 @@ test("SMS dialog supports digit filtering, cancel and successful manual OTP", as
   );
   await dialog.getByRole("button", { name: "Verify", exact: true }).click();
   await expect(page).toHaveURL(/\/user\/info$/);
+  expect(diagnosticsRequests).toBe(0);
 });
 test("OTP retry stays in dialog and WebOTP is aborted when cancelled", async ({
   page,

@@ -55,7 +55,7 @@ export async function startSim(
       throw new Error(
         "This browser did not return a supported SIM credential. Choose another method.",
       );
-    const token = await jsonPost(
+    await jsonPost(
       "/ts43/token",
       {
         vp_token: vp,
@@ -64,11 +64,6 @@ export async function startSim(
         server_id: server,
         nonce: data.nonce,
       },
-      controller.signal,
-    );
-    await jsonPost(
-      "/ts43/log",
-      { data: { type: "get_token_response", data: token.data } },
       controller.signal,
     );
     location.assign("/user/info");

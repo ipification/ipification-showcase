@@ -1,3 +1,4 @@
+import { validState } from "@/shared/server/storage/auth-state";
 import { createHash } from "node:crypto";
 import { memoryStore } from "@/shared/server/storage/memory";
 import { AuthAttemptError } from "@/shared/server/common/errors";
@@ -37,11 +38,6 @@ export interface AuthAttempt {
   backchannelProcessing?: boolean;
   browserReturned?: boolean;
 }
-export const validState = (value: unknown): value is string =>
-  typeof value === "string" &&
-  /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}(?:-qrcode)?$/.test(
-    value,
-  );
 export function bindingHash(value: string) {
   if (!/^[a-f0-9]{64}$/.test(value))
     throw new AuthAttemptError("AUTH_STATE_INVALID");

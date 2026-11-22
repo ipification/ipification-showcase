@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
-import { validState, AUTH_ATTEMPT_MS } from "./attempts";
+import { validState } from "@/shared/server/storage/auth-state";
+import { AUTH_ATTEMPT_MS } from "./attempts";
 // Separate random cookies bind the initiating browser and the callback browser
 // to one state. Only their hashes are stored in the server-side attempt.
 export const newBinding = () => randomBytes(32).toString("hex");
