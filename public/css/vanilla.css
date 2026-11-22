@@ -1,6 +1,12 @@
 body {
   margin: 0;
 }
+button:not(:disabled) {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: default;
+}
 [hidden] {
   display: none !important;
 }
@@ -20,23 +26,23 @@ body {
 *::after {
   box-sizing: border-box;
 }
-dialog.legacy-dialog {
+dialog.showcase-dialog {
   position: fixed;
   left: 50%;
   margin: 0;
 }
-dialog.legacy-dialog::backdrop,
-dialog.legacy-callback-error::backdrop {
+dialog.showcase-dialog::backdrop,
+dialog.showcase-callback-error::backdrop {
   background: rgba(0, 0, 0, 0.5);
 }
-dialog.legacy-dialog [data-slot="dialog-close"] {
+dialog.showcase-dialog [data-slot="dialog-close"] {
   position: absolute;
   border: 0;
   background: transparent;
   font-size: 28px;
   cursor: pointer;
 }
-dialog.legacy-callback-error {
+dialog.showcase-callback-error {
   position: fixed;
   top: 100px;
   left: 50%;
@@ -48,7 +54,7 @@ dialog.legacy-callback-error {
   text-align: center;
   background: #fff;
 }
-dialog.legacy-callback-error h2 {
+dialog.showcase-callback-error h2 {
   margin: 0;
   font-size: 16px;
   font-weight: 400;
@@ -63,40 +69,36 @@ dialog.legacy-callback-error h2 {
   padding: 20px;
   font-family: Arial, sans-serif;
 }
-.legacy-showcase[data-keyboard-navigation="true"] .legacy-phone-input:focus,
-.legacy-showcase[data-keyboard-navigation="true"] [role="tab"]:focus {
+.showcase-app[data-keyboard-navigation="true"] .showcase-phone-input:focus,
+.showcase-app[data-keyboard-navigation="true"] [role="tab"]:focus {
   outline: 2px solid #2646ff;
   outline-offset: 2px;
 }
-.legacy-showcase[data-keyboard-navigation="false"] .legacy-phone-input:focus,
-.legacy-showcase[data-keyboard-navigation="false"] [role="tab"]:focus {
+.showcase-app[data-keyboard-navigation="false"] .showcase-phone-input:focus,
+.showcase-app[data-keyboard-navigation="false"] [role="tab"]:focus {
   outline: none;
   box-shadow: none;
 }
-dialog.legacy-dialog [data-slot="dialog-close"]:focus-visible {
+dialog.showcase-dialog [data-slot="dialog-close"]:focus-visible {
   box-shadow: 0 0 0 2px #2646ff;
 }
-.legacy-result-page,
-.legacy-result {
+.showcase-result-page,
+.showcase-result {
   max-width: 100%;
   min-width: 0;
 }
-.legacy-result-json {
+.showcase-result-json {
   overflow-x: auto;
   overflow-wrap: anywhere;
 }
-.legacy-brand {
+.showcase-brand {
   flex: 1 1 auto;
 }
-.legacy-brand-logo {
-  width: 326px;
-  max-width: 100%;
-}
-.legacy-footer a {
+.showcase-footer a {
   color: inherit;
   text-decoration: none;
 }
-.legacy-footer button {
+.showcase-footer button {
   color: inherit;
   padding: 0;
   border: 0;
@@ -104,14 +106,14 @@ dialog.legacy-dialog [data-slot="dialog-close"]:focus-visible {
   font: inherit;
   cursor: pointer;
 }
-.legacy-tabs [data-slot="tabs-trigger"] {
+.showcase-tabs [data-slot="tabs-trigger"] {
   text-align: left;
   cursor: pointer;
 }
-.legacy-site {
+.showcase-site {
   position: relative;
 }
-.legacy-site > button {
+.showcase-site > button {
   min-width: 120px;
   padding: 8px 12px;
   background: white;

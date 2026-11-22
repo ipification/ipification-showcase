@@ -36,8 +36,8 @@ for (const viewport of [
       );
     }).toPass({ timeout: 2000 });
     // QR and instructions must never overlap, in stacked or landscape layouts.
-    const qr = await dialog.locator(".legacy-qr-content svg").boundingBox();
-    const caption = await dialog.locator(".legacy-qr-caption").boundingBox();
+    const qr = await dialog.locator(".showcase-qr-content svg").boundingBox();
+    const caption = await dialog.locator(".showcase-qr-caption").boundingBox();
     expect(
       qr!.y + qr!.height + 16 <= caption!.y ||
         qr!.x + qr!.width + 16 <= caption!.x,

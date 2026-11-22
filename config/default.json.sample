@@ -9,7 +9,6 @@
   ],
   "client_id": "",
   "client_secret": "",
-  "play_integrity_verify_domains": [],
   "clients": [
     {
       "user_flow": "pvn_ip",

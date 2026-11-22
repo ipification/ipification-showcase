@@ -25,7 +25,7 @@ test("phone guidance distinguishes empty and invalid input and clears after corr
   ).toBeEnabled();
   for (const tab of ["pnv", "login", "identity"]) {
     await page.goto(`/auth/login#${tab}`);
-    await expect(page.locator(".legacy-showcase")).toHaveAttribute(
+    await expect(page.locator(".showcase-app")).toHaveAttribute(
       "data-tab",
       tab,
     );

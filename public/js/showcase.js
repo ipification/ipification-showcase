@@ -1,4 +1,5 @@
 import { showcaseMarkup } from "./showcase/markup.js";
+import { attachStageCountryPicker } from "./showcase/stage-country-picker.js";
 import intlTelInput from "/vendor/intl/js/intlTelInputWithUtils.mjs";
 import { showQr } from "./qr.js";
 import { showSms } from "./sms.js";
@@ -46,6 +47,7 @@ try {
     keyboardNavigation = false,
     activeSim = null,
     activePreparation = null,
+    countryPicker,
     activeFlow = null;
   document.addEventListener("keydown", (event) => {
     if (
@@ -57,14 +59,15 @@ try {
       return;
     if (["Tab", "ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
       keyboardNavigation = true;
-      container.closest(".legacy-showcase").dataset.keyboardNavigation = "true";
+      container.closest(".showcase-app").dataset.keyboardNavigation = "true";
     }
   });
   document.addEventListener("pointerdown", () => {
     keyboardNavigation = false;
-    container.closest(".legacy-showcase").dataset.keyboardNavigation = "false";
+    container.closest(".showcase-app").dataset.keyboardNavigation = "false";
   });
   function render() {
+    countryPicker?.destroy();
     activeFlow = null;
     if (activePreparation) {
       activePreparation.abort();
@@ -74,7 +77,7 @@ try {
       activeSim.controller.abort();
       activeSim = null;
     }
-    container.closest(".legacy-showcase").dataset.tab = tab;
+    container.closest(".showcase-app").dataset.tab = tab;
     iti?.destroy();
     iti = undefined;
     phone = "";
@@ -107,17 +110,23 @@ try {
         storage.set("selected_auth_server_id", server);
         container.querySelector("#site").textContent = server;
         container.querySelector("#site").setAttribute("aria-expanded", "false");
+        container.querySelectorAll("[data-server]").forEach((option) =>
+          option.setAttribute(
+            "aria-selected",
+            String(option.dataset.server === server),
+          ),
+        );
         container.querySelector("#site-list").hidden = true;
       }),
     );
-    const logo = container.querySelector(".legacy-brand-logo");
+    const logo = container.querySelector(".showcase-brand-logo");
     if (config.logoUrl && config.logoStyle)
       logo.style.cssText = config.logoStyle;
     function updateConsent(country) {
-      container.querySelector(".legacy-legal")?.remove();
+      container.querySelector(".showcase-legal")?.remove();
       if (country !== "vn") return;
       const legal = document.createElement("p");
-      legal.className = "legacy-legal";
+      legal.className = "showcase-legal";
       legal.append(
         document.createTextNode(config.locale.footer.viettel_legal + " "),
       );
@@ -127,7 +136,7 @@ try {
       button.style.textDecoration = "underline";
       button.onclick = () => {
         const dialog = document.createElement("dialog");
-        dialog.className = "legacy-dialog legacy-consent-dialog";
+        dialog.className = "showcase-dialog showcase-consent-dialog";
         dialog.dataset.slot = "dialog-content";
         dialog.setAttribute("aria-label", "Viettel consent");
         dialog.innerHTML =
@@ -141,11 +150,11 @@ try {
         button,
         document.createTextNode(" in case you are Viettel subscribers."),
       );
-      container.querySelector(".legacy-footer").prepend(legal);
+      container.querySelector(".showcase-footer").prepend(legal);
     }
     updateConsent(config.appEnv === "stage" ? "ww" : defaultCountry);
     const input = container.querySelector("#showcase-phone");
-    container.closest(".legacy-showcase").dataset.keyboardNavigation =
+    container.closest(".showcase-app").dataset.keyboardNavigation =
       String(keyboardNavigation);
     container.querySelectorAll('[role="tab"]').forEach((el) =>
       el.addEventListener("keydown", (event) => {
@@ -185,7 +194,7 @@ try {
             : "";
           valid = iti ? !!iti.isValidNumber() : !!input.value;
           container
-            .querySelectorAll(".legacy-method-phone")
+            .querySelectorAll(".showcase-method-phone")
             .forEach((el) => (el.disabled = !!activeFlow || !input.value));
         });
       } else
@@ -222,7 +231,7 @@ try {
                 ? "Choose a verification method to check this phone number."
                 : "Enter a phone number to enable verification methods.";
         container
-          .querySelectorAll(".legacy-method-phone")
+          .querySelectorAll(".showcase-method-phone")
           .forEach((el) => (el.disabled = !!activeFlow || !input.value));
       };
       if (config.appEnv !== "stage") {
@@ -245,17 +254,17 @@ try {
           phone = "";
           valid = false;
           if (country === "ww") {
-            if (!wrap.classList.contains("legacy-wonderland")) {
+            if (!wrap.classList.contains("showcase-wonderland")) {
               const wonder = document.createElement("div");
-              wonder.className = "iti legacy-wonderland";
+              wonder.className = "iti showcase-wonderland";
               wonder.innerHTML =
-                '<span class="legacy-wonderland-flag" aria-hidden="true"></span><span class="legacy-wonderland-code">+999</span>';
+                '<span class="showcase-wonderland-flag" aria-hidden="true"></span><span class="showcase-wonderland-code">+999</span>';
               input.before(wonder);
               wonder.append(input);
             }
             input.placeholder = "123456789";
           } else {
-            if (wrap.classList.contains("legacy-wonderland")) {
+            if (wrap.classList.contains("showcase-wonderland")) {
               wrap.before(input);
               wrap.remove();
             }
@@ -268,12 +277,18 @@ try {
             });
           }
           container
-            .querySelectorAll(".legacy-method-phone")
+            .querySelectorAll(".showcase-method-phone")
             .forEach((el) => (el.disabled = true));
         });
+      if (config.appEnv === "stage")
+        countryPicker = attachStageCountryPicker(
+          container.querySelector("#stage-country"),
+          container.querySelector(".showcase-stage-country"),
+          container.querySelector(".showcase-country-menu"),
+        );
     }
     container
-      .querySelectorAll(".legacy-method")
+      .querySelectorAll(".showcase-method")
       .forEach((el) =>
         el.addEventListener("click", () =>
           start(config.clients.find((c) => c.user_flow === el.id)),
@@ -282,7 +297,7 @@ try {
     container.querySelector("#about")?.addEventListener("click", () => {
       const selected = config.auth_servers.find((item) => item.id === server),
         dialog = document.createElement("dialog");
-      dialog.className = "legacy-dialog legacy-about-dialog";
+      dialog.className = "showcase-dialog showcase-about-dialog";
       dialog.dataset.slot = "dialog-content";
       dialog.innerHTML = `<h2 data-slot="dialog-title">${esc(config.locale.modals.about_title)}</h2><p>${esc(config.locale.modals.server_label)}: ${esc(selected?.id)}</p><p>${esc(selected?.url)}</p><a href="https://developer.ipification.com/#/" target="_blank" rel="noreferrer">${esc(config.locale.modals.developer_link)}</a><button type="button" data-slot="dialog-close" aria-label="Close">×</button>`;
       dialog.querySelector("button").onclick = () => dialog.close();
@@ -294,7 +309,7 @@ try {
   function endFlow(token) {
     if (!token || activeFlow !== token) return;
     activeFlow = null;
-    container.querySelectorAll(".legacy-method").forEach((button) => {
+    container.querySelectorAll(".showcase-method").forEach((button) => {
       button.disabled = needsPhone(button.id) && !phone;
       button.setAttribute("aria-busy", "false");
     });
@@ -309,7 +324,7 @@ try {
     }
     const token = {};
     activeFlow = token;
-    container.querySelectorAll(".legacy-method").forEach((button) => {
+    container.querySelectorAll(".showcase-method").forEach((button) => {
       button.disabled = true;
       button.setAttribute("aria-busy", String(button.id === client.user_flow));
     });
@@ -365,7 +380,7 @@ try {
   }
   render();
   container.hidden = false;
-  document.querySelector(".legacy-loading").remove();
+  document.querySelector(".showcase-loading").remove();
   window.addEventListener("pageshow", () => endFlow(activeFlow));
   window.addEventListener("resize", () => {
     const el = container.querySelector("#pvn_ipificator");
@@ -388,7 +403,7 @@ try {
     .then(({ error_message: message }) => {
       if (!message) return;
       const dialog = document.createElement("dialog");
-      dialog.className = "legacy-callback-error";
+      dialog.className = "showcase-callback-error";
       dialog.setAttribute("aria-label", message);
       const title = document.createElement("h2");
       title.textContent = message;
@@ -416,7 +431,7 @@ try {
     return { response, data };
   }
 } catch {
-  const loading = document.querySelector(".legacy-loading");
+  const loading = document.querySelector(".showcase-loading");
   if (loading)
     loading.textContent =
       "Showcase is not ready. Check runtime configuration and retry.";

@@ -13,10 +13,10 @@ export async function startSim(
   button.disabled = true;
   button.setAttribute("aria-busy", "true");
   const pending = document.createElement("div");
-  pending.className = "legacy-pending";
+  pending.className = "showcase-pending";
   pending.innerHTML =
     '<p role="status">Waiting for SIM verification…</p><button type="button">Cancel</button>';
-  container.querySelector(".legacy-section").append(pending);
+  container.querySelector(".showcase-section").append(pending);
   function release() {
     if (getActiveSim() !== attempt) return;
     setActiveSim(null);

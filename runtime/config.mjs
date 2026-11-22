@@ -61,15 +61,14 @@ export class ConfigurationError extends Error {
   }
 }
 export function validateFeatureEnvironment() {
-  if (process.env.PLAY_INTEGRITY_ENABLED === "true")
-    for (const name of [
+  for (const name of [
       "PLAY_INTEGRITY_PACKAGE_NAME",
       "PLAY_INTEGRITY_USER_FLOW",
       "PLAY_INTEGRITY_STATE_SECRET",
       "PLAY_INTEGRITY_STATE_ISSUER",
       "PLAY_INTEGRITY_STATE_AUDIENCE",
-    ])
-      if (!process.env[name]) throw new ConfigurationError(name);
+  ])
+    if (!process.env[name]) throw new ConfigurationError(name);
 }
 export function loadRuntimeConfig() {
   if (snapshot) return snapshot;
@@ -108,7 +107,6 @@ export function loadRuntimeConfig() {
       throw new ConfigurationError("clients");
     flows.add(c.user_flow);
   }
-  validateFeatureEnvironment();
   const locale = JSON.parse(
     readFileSync(path.join(appRoot, "config/locale.json"), "utf8"),
   );

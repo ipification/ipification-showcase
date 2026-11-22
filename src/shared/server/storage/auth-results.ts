@@ -2,6 +2,7 @@ import { memoryStore } from "./memory";
 import type { DisplayResult, UserInfo } from "@/shared/contracts";
 type Store = {
   get: (key: string) => Promise<DisplayResult | UserInfo | null>;
+  take: (key: string) => DisplayResult | UserInfo | null;
   set: (key: string, value: DisplayResult | UserInfo) => Promise<unknown>;
 };
 export function createAuthResultStore(
@@ -25,7 +26,7 @@ export function createAuthResultStore(
       return undefined;
     },
     async getUserInfo(state?: unknown): Promise<UserInfo | undefined> {
-      return ((await store.get(`${state}-user-info`)) as UserInfo) || undefined;
+      return (store.take(`${state}-user-info`) as UserInfo) || undefined;
     },
   };
 }
@@ -33,8 +34,11 @@ const store = createAuthResultStore({
   async get(id) {
     return memoryStore.get<DisplayResult | UserInfo>("result:" + id) ?? null;
   },
+  take(id) {
+    return memoryStore.take<DisplayResult | UserInfo>("result:" + id) ?? null;
+  },
   async set(id, value) {
-    memoryStore.set("result:" + id, value, 3600000);
+    memoryStore.set("result:" + id, value, 600000);
   },
 });
 export const { saveResult, waitForResult, getUserInfo } = store;

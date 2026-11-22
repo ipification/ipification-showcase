@@ -159,10 +159,11 @@ export function createCibaService(overrides: Partial<Dependencies> = {}) {
   }): Promise<TokenOutcome> {
     // This session opens the Showcase result page for both success and error data.
     // isAuthenticated here is a demo-display flag, not a phone-verification policy.
-    const createDemoDisplaySession = (data: UserInfo) =>
+    const createDemoDisplaySession = (data: UserInfo, failed = false) =>
       ports.sessions.create(
         {
-          isAuthenticated: true,
+          isAuthenticated: !failed,
+          ...(failed ? { displayErrorOnly: true } : {}),
           userData: {
             userInfo: data,
             client_id: client.client_id,
@@ -187,7 +188,7 @@ export function createCibaService(overrides: Partial<Dependencies> = {}) {
         kind: "failure",
         server,
         failure,
-        sessionId: await createDemoDisplaySession(failureData(failure)),
+        sessionId: await createDemoDisplaySession(failureData(failure), true),
       };
     }
   }

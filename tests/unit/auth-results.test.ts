@@ -4,6 +4,7 @@ test("result writes remain sequential and total miss retains five reads and slee
   const operations: string[] = [];
   const store = createAuthResultStore(
     {
+      take: () => null,
       get: async () => {
         operations.push("read");
         return null;

@@ -30,6 +30,6 @@ This guide is the starting point for the Express showcase documentation. It expl
 
 The **browser** calls the showcase's own endpoints. The **showcase backend** holds client credentials and calls the IPification authorization, token, userinfo and CIBA endpoints. In your integration, replace the showcase backend with your own backend and register your own callback URI. Paths such as `/auth/prepare`, `/auth/status`, `/sms/auth` and `/ts43/token` are showcase implementation choices, not IPification API requirements.
 
-Keep client secrets and access tokens on the backend. Examples are educational and do not constitute a complete production OAuth implementation: validate state and redirect URI, use HTTPS, and implement provider-supported OAuth/OIDC protections, including PKCE and ID-token validation where applicable. The showcase does not itself implement PKCE or ID-token validation in the browser flow. Never log credentials, authorization codes, tokens, OTPs or full userinfo.
+Keep client secrets and access tokens on the backend. Browser auth validates the ID token and nonce, but does not implement PKCE; mobile and Play Integrity code exchanges lack browser attempt nonce binding. IM backchannel source authentication also remains a deployment responsibility. These examples are educational and do not constitute a complete production OAuth implementation. Never log credentials, authorization codes, tokens, OTPs or full userinfo.
 
 The source links above describe the current implementation.

@@ -1,3 +1,4 @@
+import { providerNonces } from "./provider";
 import { expect } from "vitest";
 export async function prepareAttempt(
   base: string,
@@ -17,6 +18,8 @@ export async function prepareAttempt(
     headers: { cookie: owner },
   });
   expect(start.status).toBe(302);
+  const providerUrl = new URL(start.headers.get("location")!);
+  providerNonces.set(providerUrl.origin, providerUrl.searchParams.get("nonce")!);
   const callback = start.headers.get("set-cookie")!.split(";")[0];
   return { ...data, owner, callback, start } as {
     state: string;

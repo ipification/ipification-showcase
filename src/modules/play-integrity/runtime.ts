@@ -2,8 +2,10 @@ import { createPlayIntegrityAttemptService } from "./attempts";
 import { createPlayIntegrityService } from "./verifier";
 import { exchangeCodeAndGetUserInfo } from "@/shared/server/common/http-client";
 import { createIntegrityService } from "./service";
+import { validateFeatureEnvironment } from "../../../runtime/config.mjs";
 /** Composition root: environment and concrete adapters stay outside the service. */
 export function runtimeIntegrityService() {
+  validateFeatureEnvironment();
   const packageName = process.env.PLAY_INTEGRITY_PACKAGE_NAME;
   return createIntegrityService({
     attempts: createPlayIntegrityAttemptService({

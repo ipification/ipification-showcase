@@ -14,6 +14,7 @@ test("expired attempts fail even while their storage record exists", async () =>
     origin: "http://localhost",
     qr: false,
     ownerHash: bindingHash(owner),
+    nonce: "fixture-nonce",
     status: "prepared",
     expiresAt: Date.now() - 1,
   });
@@ -36,6 +37,7 @@ test("QR start opens one completion window and rejects an expired scan", async (
     ...match,
     qr: true,
     ownerHash: bindingHash(owner),
+    nonce: "fixture-nonce",
     status: "prepared" as const,
   };
   const state = randomUUID() + "-qrcode";
@@ -75,6 +77,7 @@ test("concurrent callbacks can claim an attempt only once", async () => {
     state,
     qr: false,
     ownerHash: bindingHash(owner),
+    nonce: "fixture-nonce",
     status: "prepared",
     expiresAt: Date.now() + 60000,
   });

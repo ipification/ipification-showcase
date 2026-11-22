@@ -20,9 +20,9 @@ const resultJson = (value: unknown) =>
     )
     .map((token) => {
       const css = /^".*:\s*$/.test(token)
-        ? "legacy-json-key"
+        ? "showcase-json-key"
         : /^(?:true|false|null|-?\d)/.test(token)
-          ? "legacy-json-value"
+          ? "showcase-json-value"
           : "";
       return css
         ? `<span class="${css}">${escapeHtml(token)}</span>`
@@ -39,7 +39,10 @@ export async function userInfo(req: Request, res: Response) {
       .set("Cache-Control", "private, no-store")
       .send("Service unavailable");
   }
-  if (!session?.isAuthenticated || !session.userData)
+  if (
+    (!session?.isAuthenticated && !session?.displayErrorOnly) ||
+    !session.userData
+  )
     return res.redirect(302, "/");
   const result = session.userData;
   res.set("Cache-Control", "private, no-store");

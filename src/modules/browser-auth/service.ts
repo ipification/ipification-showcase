@@ -96,6 +96,7 @@ export function createAuthService(overrides: Partial<Dependencies> = {}) {
       phone: input.phone,
       qr: input.qr,
       ownerHash: bindingHash(ownerToken),
+      nonce: randomUUID(),
       status: "prepared",
       expiresAt,
       ...(input.qr ? { scanExpiresAt: expiresAt } : {}),
@@ -138,6 +139,7 @@ export function createAuthService(overrides: Partial<Dependencies> = {}) {
         userFlow: client.user_flow,
         realm: context.config.realm,
         state: attempt.state,
+        nonce: attempt.nonce,
         phone: attempt.phone,
         appEnv: context.appEnv,
       }),
@@ -216,6 +218,7 @@ export function createAuthService(overrides: Partial<Dependencies> = {}) {
           clientSecret: client!.client_secret,
           redirectUri: `${attempt.origin}/auth/callback/${attempt.userFlow}/${attempt.serverId}`,
           code: input.code,
+          browser: { state: attempt.state, nonce: attempt.nonce },
         }));
         // 2. Store both result views before marking the attempt terminal for status polling.
         await ports.results.saveResult(

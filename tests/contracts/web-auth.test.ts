@@ -60,7 +60,7 @@ test("web callbacks retain 302, QR/backchannel order, independent session and S2
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ state: attempt.state }),
     });
-    expect(await repeat.json()).toEqual(provider.behavior.userInfo);
+    expect(repeat.status).toBe(401);
     const missing = await get("/auth/s2s/signin", {
       method: "POST",
       headers: { "content-type": "application/json" },

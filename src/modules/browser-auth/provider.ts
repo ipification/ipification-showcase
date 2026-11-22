@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import qs from "qs";
 import type { ServerClient } from "@/config/load";
 import type { AuthServer } from "@/shared/contracts";
@@ -10,6 +9,7 @@ export function buildAuthorizationUrl({
   server,
   realm,
   state,
+  nonce,
   phone,
   appEnv = process.env.APP_ENV || "development",
 }: {
@@ -19,6 +19,7 @@ export function buildAuthorizationUrl({
   server: AuthServer;
   realm: string;
   state: unknown;
+  nonce: string;
   phone?: unknown;
   appEnv?: string;
 }) {
@@ -30,7 +31,7 @@ export function buildAuthorizationUrl({
     redirect_uri: `${baseUrl}/auth/callback/${userFlow}/${server.id}`,
     scope: client.scope,
     state,
-    nonce: randomUUID(),
+    nonce,
     ui_locales: "en",
     consent_id: process.env.CONSENT_ID,
     consent_timestamp: Math.floor(Date.now() / 1000),
@@ -51,6 +52,7 @@ export async function exchangeAuthorizationCode({
   clientSecret,
   redirectUri,
   code,
+  browser,
 }: {
   server: AuthServer;
   realm: string;
@@ -58,14 +60,20 @@ export async function exchangeAuthorizationCode({
   clientSecret: string;
   redirectUri: unknown;
   code: unknown;
+  browser?: { state: string; nonce: string };
 }) {
   const root = `${server.url}/realms/${realm}/protocol/openid-connect`;
   // The server exchanges the authorization code, then uses its token for user info.
-  return exchangeCodeAndGetUserInfo(root + "/token", root + "/userinfo", {
-    code,
-    redirect_uri: redirectUri,
-    grant_type: "authorization_code",
-    client_id: clientId,
-    client_secret: clientSecret,
-  });
+  return exchangeCodeAndGetUserInfo(
+    root + "/token",
+    root + "/userinfo",
+    {
+      code,
+      redirect_uri: redirectUri,
+      grant_type: "authorization_code",
+      client_id: clientId,
+      client_secret: clientSecret,
+    },
+    browser ? { ...browser, jwksUri: root + "/certs" } : undefined,
+  );
 }

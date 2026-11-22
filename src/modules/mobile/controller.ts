@@ -1,14 +1,21 @@
 import { resolveContext } from "@/shared/server/http/context";
 import { readBody } from "@/shared/server/http/body";
 import { json, requestFailure } from "@/shared/server/http/response";
-import { ApplicationError, providerFailure } from "@/shared/server/common/errors";
+import {
+  ApplicationError,
+  providerFailure,
+} from "@/shared/server/common/errors";
 import { authService } from "@/modules/browser-auth/service";
 import { decodeMobile } from "@/modules/browser-auth/input";
+import { checkAuthLimit } from "@/shared/server/storage/rate-limit";
 export async function exchangeMobileCode(request: Request) {
   let context, input;
   try {
     context = resolveContext(request);
     input = decodeMobile(await readBody(request));
+    const limit = await checkAuthLimit("mobile", context, input);
+    if (!limit.allowed)
+      return json({ error: "RATE_LIMITED" }, 429, limit.headers);
   } catch (error) {
     return requestFailure(error);
   }

@@ -6,7 +6,8 @@ test("reopening the pending page shows an already completed result without excha
     data: { user_flow: "login_im", server_id: "stage", qr: false },
   });
   const attempt = await response.json();
-  await page.request.get(attempt.url, { maxRedirects: 0 });
+  const start = await page.request.get(attempt.url, { maxRedirects: 0 });
+  await page.request.get(start.headers().location, { maxRedirects: 0 });
   const callback = await page.request.get(
     `/auth/callback/login_im/stage?state=${attempt.state}&code=fixture-code`,
     { maxRedirects: 0 },
@@ -25,7 +26,8 @@ test("pending IM reports lost connection and recovers when status requests resum
     data: { user_flow: "login_im", server_id: "stage", qr: false },
   });
   const attempt = await prepared.json();
-  await page.request.get(attempt.url, { maxRedirects: 0 });
+  const start = await page.request.get(attempt.url, { maxRedirects: 0 });
+  await page.request.get(start.headers().location, { maxRedirects: 0 });
   let offline = true;
   await page.route("**/auth/status?**", (route) =>
     offline ? route.abort() : route.continue(),

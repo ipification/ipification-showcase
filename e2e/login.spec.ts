@@ -79,7 +79,7 @@ test("server render shows loading until browser preferences are ready", async ({
     await page.goto("/auth/login#login");
     await expect(page.locator("main")).toHaveAttribute("aria-busy", "true");
     await expect(page.getByRole("status")).toHaveText("Loading…");
-    await expect(page.locator(".legacy-brand-logo")).toHaveCount(0);
+    await expect(page.locator(".showcase-brand-logo")).toHaveCount(0);
     await expect(page.getByRole("tab", { name: "PNV" })).toHaveCount(0);
     await expect(
       page.getByRole("heading", { name: "Phone Number Verification" }),
@@ -125,7 +125,7 @@ test("configured title, favicon and logo styling are reflected in the page", asy
     "href",
     "/images/logo.ico",
   );
-  await expect(page.locator(".legacy-brand-logo")).toHaveCSS(
+  await expect(page.locator(".showcase-brand-logo")).toHaveCSS(
     "max-width",
     "123px",
   );

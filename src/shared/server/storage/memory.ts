@@ -26,6 +26,11 @@ export class MemoryStore {
   delete(key: string): void {
     this.cache.delete(key);
   }
+  take<T>(key: string): T | undefined {
+    const value = this.get<T>(key);
+    if (value !== undefined) this.cache.delete(key);
+    return value;
+  }
 }
 const globalStore = globalThis as typeof globalThis & {
   __showcaseMemoryStore?: MemoryStore;

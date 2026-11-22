@@ -63,6 +63,7 @@ export async function exchangeCodeAndGetUserInfo(
   tokenUrl: string,
   userUrl: string,
   params: Record<string, unknown>,
+  browser?: { state: string; nonce: string; jwksUri: string },
 ): Promise<{
   tokenInfo: Record<string, unknown> & { access_token: string };
   userInfo: UserInfo;
@@ -76,6 +77,7 @@ export async function exchangeCodeAndGetUserInfo(
         : tokenEndpoint.origin,
       token_endpoint: tokenEndpoint.href,
       userinfo_endpoint: userInfoEndpoint.href,
+      ...(browser ? { jwks_uri: browser.jwksUri } : {}),
     },
     String(params.client_id || ""),
     String(params.client_secret || ""),
@@ -89,6 +91,7 @@ export async function exchangeCodeAndGetUserInfo(
     tokenEndpoint.origin === userInfoEndpoint.origin
   )
     oidc.allowInsecureRequests(config);
+  if (browser) oidc.enableNonRepudiationChecks(config);
   const grantParameters = new URLSearchParams();
   for (const [name, value] of Object.entries(params)) {
     if (
@@ -99,6 +102,15 @@ export async function exchangeCodeAndGetUserInfo(
   }
   const tokenInfo = await providerCall("token", async () => {
     try {
+      if (browser) {
+        const callback = new URL(String(params.redirect_uri));
+        callback.searchParams.set("code", String(params.code));
+        callback.searchParams.set("state", browser.state);
+        return await oidc.authorizationCodeGrant(config, callback, {
+          expectedState: browser.state,
+          expectedNonce: browser.nonce,
+        });
+      }
       return await oidc.genericGrantRequest(
         config,
         String(params.grant_type || "authorization_code"),
@@ -110,12 +122,12 @@ export async function exchangeCodeAndGetUserInfo(
   });
   const userInfo = await providerCall("userinfo", async () => {
     try {
-      // The existing demo has no validated ID-token subject to compare here.
-      // State/callback binding remains enforced by the calling authentication service.
+      // Browser authorization has a verified ID-token subject; generic mobile
+      // and Play Integrity exchanges do not yet have an attempt-bound subject.
       return await oidc.fetchUserInfo(
         config,
         tokenInfo.access_token,
-        oidc.skipSubjectCheck,
+        browser ? tokenInfo.claims()!.sub : oidc.skipSubjectCheck,
       );
     } catch (error) {
       throw normalizeOidcError(error, false);

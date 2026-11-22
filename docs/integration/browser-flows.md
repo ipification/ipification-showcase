@@ -56,22 +56,7 @@ window.location.assign(url);
 
 The backend uses [`openid-client`](https://github.com/panva/openid-client) for code exchange and userinfo. The app constructs its configuration from the configured Keycloak endpoints, uses `client_secret_post` at the token endpoint, then sends the access token as a Bearer header to userinfo. The library requires a conforming token response including `token_type` and a userinfo response containing `sub`. See [provider](../../src/modules/browser-auth/provider.ts) and [HTTP client](../../src/shared/server/common/http-client.ts).
 
-```js
-import * as oidc from 'openid-client';
-
-// Run only on your backend, after validating the callback and state.
-const config = new oidc.Configuration({
-  issuer: issuerUrl, token_endpoint: `${oidcRoot}/token`,
-  userinfo_endpoint: `${oidcRoot}/userinfo`,
-}, clientId, clientSecret);
-const tokens = await oidc.genericGrantRequest(config, 'authorization_code', {
-  code, redirect_uri: callbackUrl,
-});
-// Use the validated ID-token subject when available and required by your flow.
-const userInfo = await oidc.fetchUserInfo(config, tokens.access_token, expectedSubject);
-```
-
-The example omits required callback/state, nonce, ID-token and session checks. The showcase currently binds its callback to the attempt but does not validate an ID-token subject for comparison, so its helper uses `skipSubjectCheck`; customers should use their validated expected subject and their own complete OIDC security policy. SMS/SIM retain their existing CIBA-specific HTTP flow. Configuration requires HTTPS except for same-origin loopback test fixtures.
+For browser authorization, the showcase uses `authorizationCodeGrant` with the attempt's expected state and nonce, validates the ID token signature using the issuer's JWKS, and matches the UserInfo subject to the validated ID token subject. No fallback is used if validation fails. The authorization server must return an ID token and expose its signing keys at its OIDC certs endpoint. Browser authorization does not currently use PKCE; this leaves additional authorization-code interception and injection risk. Mobile code exchange and Play Integrity code exchange use a separate generic grant and do not have the browser attempt's nonce binding; see [Mobile and S2S](mobile-s2s.md). SMS/SIM retain their CIBA-specific HTTP flow. Configuration requires HTTPS except for same-origin loopback test fixtures.
 
 ## Read the result correctly
 

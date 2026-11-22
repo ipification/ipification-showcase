@@ -5,23 +5,23 @@ test("legacy single-column layout and Identity content order remain usable", asy
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.route("**/api/showcase-config", async (route) => {
+    const response = await route.fetch();
+    const config = await response.json();
+    config.locale.app.name = "IPification features showcase";
+    await route.fulfill({ response, json: config });
+  });
   await page.goto("/auth/login#pnv");
-  const main = page.locator(".legacy-main");
+  const main = page.locator(".showcase-main");
   await expect(main).toBeVisible();
   expect((await main.boundingBox())!.width).toBe(580);
   await expect(page.getByText("Mobile identity", { exact: true })).toHaveCount(
     0,
   );
-  const logo = page.locator(".legacy-brand-logo");
-  await expect(logo).toHaveAttribute(
-    "src",
-    "/images/logo/ipification-horizontal-black.svg",
-  );
-  expect(
-    await logo.evaluate(
-      (el: HTMLImageElement) => el.complete && el.naturalWidth > 0,
-    ),
-  ).toBe(true);
+  const logo = page.locator(".showcase-brand-logo");
+  await expect(logo).toHaveText("IPification features showcase");
+  await expect(logo).toHaveCSS("font-size", "30px");
+  await expect(logo).toHaveCSS("line-height", "28px");
   await page.getByRole("tab", { name: "Identity", exact: true }).click();
   const anonymous = page.getByRole("button", {
     name: "Anonymous Identity",
@@ -71,16 +71,24 @@ test("inline stage country picker still switches between Wonderland and a real c
     await expect(
       page.getByRole("button", { name: "IP", exact: true }),
     ).toBeEnabled();
-    await page.getByLabel("Country", { exact: true }).selectOption("us");
+    await page.getByRole("button", { name: /change country/i }).click();
+    await page
+      .getByRole("searchbox", { name: /search country/i })
+      .fill("united states");
+    await page.getByRole("option", { name: /united states.*1/i }).click();
     await page.getByLabel("Phone number", { exact: true }).fill("2025550123");
     await expect(
       page.getByRole("button", { name: "IP", exact: true }),
     ).toBeEnabled();
-    await page.getByLabel("Country", { exact: true }).selectOption("ww");
+    await page.getByRole("button", { name: /change country/i }).click();
+    await page
+      .getByRole("searchbox", { name: /search country/i })
+      .fill("wonderland");
+    await page.getByRole("option", { name: /wonderland.*999/i }).click();
     await expect(page.getByLabel("Phone number", { exact: true })).toHaveValue(
       "",
     );
-    await expect(page.locator(".legacy-stage-phone")).toContainText("+999");
+    await expect(page.locator(".showcase-stage-phone")).toContainText("+999");
     await expect(
       page.getByRole("button", { name: "IP", exact: true }),
     ).toBeDisabled();
@@ -89,7 +97,7 @@ test("inline stage country picker still switches between Wonderland and a real c
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(375);
     await page.screenshot({
-      path: "test-results/legacy-stage-mobile.png",
+      path: "test-results/showcase-stage-mobile.png",
       fullPage: true,
     });
   } finally {
@@ -108,16 +116,16 @@ test("stage country names and Wonderland reset remain correct after changing tab
     await route.fulfill({ response, json: config });
   });
   await page.goto("/auth/login#pnv");
-  const country = page.getByLabel("Country", { exact: true });
-  await expect(country.locator('option[value="us"]')).toContainText(
-    "United States",
-  );
-  await country.selectOption("us");
+  await page.getByRole("button", { name: /change country/i }).click();
+  await page
+    .getByRole("searchbox", { name: /search country/i })
+    .fill("united states");
+  await page.getByRole("option", { name: /united states.*1/i }).click();
   await page.getByRole("tab", { name: "Login", exact: true }).click();
   await page.getByRole("tab", { name: "PNV", exact: true }).click();
   await page.getByLabel("Phone number", { exact: true }).fill("123456789");
   await expect(
     page.getByRole("button", { name: "IP", exact: true }),
   ).toBeEnabled();
-  await expect(page.locator(".legacy-stage-phone")).toContainText("+999");
+  await expect(page.locator(".showcase-stage-phone")).toContainText("+999");
 });

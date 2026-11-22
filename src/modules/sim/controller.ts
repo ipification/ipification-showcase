@@ -8,7 +8,10 @@ import {
   operationFailure,
 } from "@/shared/server/ciba/handlers";
 import { json } from "@/shared/server/http/response";
-import { checkTs43Limit } from "@/shared/server/storage/rate-limit";
+import {
+  checkTs43Limit,
+  checkAuthLimit,
+} from "@/shared/server/storage/rate-limit";
 
 export async function createSimCredentialRequest(request: Request) {
   let context,
@@ -38,6 +41,9 @@ export async function exchangeSimCredential(request: Request) {
   let context, input;
   try {
     ({ context, input } = await readCibaRequest(request));
+    const limit = await checkAuthLimit("sim-token", context, input);
+    if (!limit.allowed)
+      return json({ error: "RATE_LIMITED" }, 429, limit.headers);
   } catch (error) {
     return requestFailure(error);
   }

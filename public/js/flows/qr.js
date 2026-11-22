@@ -3,15 +3,15 @@ import { completionUrlForAttempt } from "../completion-url.js";
 
 export function showQr(attempt, client, token, { start, endFlow }) {
   const dialog = document.createElement("dialog");
-  dialog.className = "legacy-dialog legacy-qr-dialog";
+  dialog.className = "showcase-dialog showcase-qr-dialog";
   dialog.tabIndex = -1;
   dialog.dataset.slot = "dialog-content";
   dialog.setAttribute("aria-label", client.title || "Verify your identity");
-  dialog.innerHTML = `<header data-slot="dialog-header"><h2 data-slot="dialog-title"></h2></header><div class="legacy-qr-content"></div><div class="legacy-qr-caption"></div><button type="button" data-slot="dialog-close" aria-label="Close">×</button>`;
+  dialog.innerHTML = `<header data-slot="dialog-header"><h2 data-slot="dialog-title"></h2></header><div class="showcase-qr-content"></div><div class="showcase-qr-caption"></div><button type="button" data-slot="dialog-close" aria-label="Close">×</button>`;
   dialog.querySelector("h2").textContent =
     client.title || "Verify your identity";
-  const content = dialog.querySelector(".legacy-qr-content"),
-    caption = dialog.querySelector(".legacy-qr-caption");
+  const content = dialog.querySelector(".showcase-qr-content"),
+    caption = dialog.querySelector(".showcase-qr-caption");
   let deadline = attempt.expiresAt,
     started = false,
     disconnected = false,
@@ -25,9 +25,9 @@ export function showQr(attempt, client, token, { start, endFlow }) {
     const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
     if (!left) {
       content.innerHTML =
-        '<div class="legacy-qr-recovery"><strong>QR code expired</strong><p>This verification link has expired. Create a new QR code to continue.</p></div>';
+        '<div class="showcase-qr-recovery"><strong>QR code expired</strong><p>This verification link has expired. Create a new QR code to continue.</p></div>';
       caption.innerHTML =
-        '<p>Create a new code to restart verification.</p><button class="legacy-action" type="button">Create new QR code</button>';
+        '<p>Create a new code to restart verification.</p><button class="showcase-action" type="button">Create new QR code</button>';
       caption.querySelector("button").onclick = () => {
         endFlow(token);
         dialog.close();
@@ -37,9 +37,9 @@ export function showQr(attempt, client, token, { start, endFlow }) {
     }
     if (disconnected) {
       content.innerHTML =
-        '<div class="legacy-qr-recovery"><strong>Connection interrupted</strong><p>Check your connection, then create a new QR code to continue.</p></div>';
+        '<div class="showcase-qr-recovery"><strong>Connection interrupted</strong><p>Check your connection, then create a new QR code to continue.</p></div>';
       caption.innerHTML =
-        '<p>Unable to receive verification updates.</p><button class="legacy-action" type="button">Create new QR code</button>';
+        '<p>Unable to receive verification updates.</p><button class="showcase-action" type="button">Create new QR code</button>';
       caption.querySelector("button").onclick = () => {
         endFlow(token);
         dialog.close();
@@ -50,13 +50,13 @@ export function showQr(attempt, client, token, { start, endFlow }) {
     const countdown = `${String(Math.floor(left / 60)).padStart(2, "0")}:${String(left % 60).padStart(2, "0")}`;
     content.innerHTML = started
       ? '<p role="status">Verification in progress… Complete the steps on your phone.</p>'
-      : `<div class="legacy-qr-code">${code.createSvgTag({ cellSize: 4, margin: 0 })}</div><a data-testid="qr-auth-link" class="sr-only" target="_blank" rel="noreferrer"></a>`;
+      : `<div class="showcase-qr-code">${code.createSvgTag({ cellSize: 4, margin: 0 })}</div><a data-testid="qr-auth-link" class="sr-only" target="_blank" rel="noreferrer"></a>`;
     const link = content.querySelector("a");
     if (link) {
       link.href = attempt.url;
       link.textContent = "Open verification link";
     }
-    caption.innerHTML = `${started ? "" : "<p>Scan QR code with your phone</p>"}<p class="legacy-qr-status" role="status">${started ? "Waiting for the verification result…" : "Waiting for verification…"}</p><p class="legacy-qr-expiry">${started ? "Complete verification in" : "Expires in"} <span class="legacy-qr-countdown">${countdown}</span></p>`;
+    caption.innerHTML = `${started ? "" : "<p>Scan QR code with your phone</p>"}<p class="showcase-qr-status" role="status">${started ? "Waiting for the verification result…" : "Waiting for verification…"}</p><p class="showcase-qr-expiry">${started ? "Complete verification in" : "Expires in"} <span class="showcase-qr-countdown">${countdown}</span></p>`;
   }
   async function poll() {
     if (!active || busy) return;

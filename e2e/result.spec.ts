@@ -15,7 +15,8 @@ for (const [name, verified] of [
       data: { user_flow: "pvn_ip", server_id: "stage", qr: false },
     });
     const attempt = await prepared.json();
-    await page.request.get(attempt.url, { maxRedirects: 0 });
+    const start = await page.request.get(attempt.url, { maxRedirects: 0 });
+    await page.request.get(start.headers().location, { maxRedirects: 0 });
     await page.goto(
       `/auth/callback/pvn_ip/stage?state=${attempt.state}&code=fixture-result-${name}`,
     );

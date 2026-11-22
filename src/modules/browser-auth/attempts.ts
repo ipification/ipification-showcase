@@ -20,6 +20,7 @@ export interface AuthAttempt {
   phone?: unknown;
   qr: boolean;
   ownerHash: string;
+  nonce: string;
   callbackHash?: string;
   status:
     | "prepared"

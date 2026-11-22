@@ -1,7 +1,7 @@
 export function showSms(client, token, { phone, server, endFlow, jsonPost }) {
   const dialog = document.createElement("dialog"),
     controller = new AbortController();
-  dialog.className = "legacy-dialog legacy-sms-dialog";
+  dialog.className = "showcase-dialog showcase-sms-dialog";
   dialog.dataset.slot = "dialog-content";
   dialog.innerHTML =
     '<header data-slot="dialog-header"><h2 data-slot="dialog-title">Enter OTP code</h2><p>Enter the verification code sent to your phone.</p></header><form><label for="sms-code">OTP code</label><input id="sms-code" autocomplete="one-time-code" inputmode="numeric" disabled><p role="status">Sending code…</p><p role="alert" hidden></p><div><button type="button">Cancel</button><button type="button" data-retry hidden>Retry</button><button type="submit" disabled>Verify</button></div></form>';

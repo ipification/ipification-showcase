@@ -75,7 +75,8 @@ test("IM pending page adopts the owner's stored backchannel result", async ({
     data: { user_flow: "login_im", server_id: "stage", qr: false },
   });
   const attempt = await prepared.json();
-  await page.request.get(attempt.url, { maxRedirects: 0 });
+  const start = await page.request.get(attempt.url, { maxRedirects: 0 });
+  await page.request.get(start.headers().location, { maxRedirects: 0 });
   const backchannel = await page.request.get(
     `/auth/callback/login_im/stage?state=${attempt.state}&code=fixture`,
     { headers: { "ip-backchannel-im-auth": "true" }, maxRedirects: 0 },

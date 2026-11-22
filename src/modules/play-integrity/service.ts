@@ -108,17 +108,11 @@ export function createIntegrityService({
     const attempt = await attempts.claimAttempt(input.attemptId);
     if (!attempt) return denied("conflict", "ATTEMPT_UNAVAILABLE");
     try {
-      const required = context.config.play_integrity_verify_domains?.some(
-        (d) =>
-          typeof d === "string" && d.trim().toLowerCase() === context.hostname,
-      );
-      const verdict = required
-        ? await verify({
-            integrityToken: input.token,
-            expectedRequestHash: attempt.requestHash,
-            expectedPackageName: policy.packageName,
-          })
-        : { decision: "allow", reasonCodes: [] };
+      const verdict = await verify({
+        integrityToken: input.token,
+        expectedRequestHash: attempt.requestHash,
+        expectedPackageName: policy.packageName,
+      });
       if (verdict.decision !== "allow") {
         await attempts.rejectAttempt(
           attempt.id,

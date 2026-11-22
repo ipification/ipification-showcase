@@ -81,7 +81,7 @@ test("successful token stores display data before returning the new session", as
     "old",
   );
 });
-test("token failure still adopts an authenticated demo error session", async () => {
+test("token failure creates only an unauthenticated error display session", async () => {
   const s = setup();
   s.provider.verifySmsCode.mockRejectedValueOnce({
     message: "invalid code",
@@ -99,7 +99,8 @@ test("token failure still adopts an authenticated demo error session", async () 
   });
   expect(s.sessions.create).toHaveBeenCalledWith(
     expect.objectContaining({
-      isAuthenticated: true,
+      isAuthenticated: false,
+      displayErrorOnly: true,
       userData: expect.objectContaining({
         userInfo: {
           error: "invalid code",

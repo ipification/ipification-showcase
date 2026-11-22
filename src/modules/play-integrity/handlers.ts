@@ -17,8 +17,6 @@ export async function handleIntegrity(
   request: Request,
   endpoint: IntegrityEndpoint,
 ) {
-  if (process.env.PLAY_INTEGRITY_ENABLED !== "true")
-    return new Response(null, { status: 404 });
   const requestId = randomUUID(),
     start = Date.now();
   const respond = (status: number, body: Record<string, unknown>) => {

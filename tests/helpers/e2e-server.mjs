@@ -1,9 +1,21 @@
 import { spawn } from "node:child_process";
+import { generateKeyPairSync } from "node:crypto";
+import jwt from "jsonwebtoken";
 import { createServer } from "node:http";
 import { mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 const port = process.env.E2E_PORT || "3002";
+const { privateKey, publicKey } = generateKeyPairSync("rsa", {
+  modulusLength: 2048,
+});
+const jwk = {
+  ...publicKey.export({ format: "jwk" }),
+  kid: "fixture",
+  alg: "RS256",
+  use: "sig",
+};
+let authNonce = "";
 const resultClaims = {
   "fixture-result-missing": undefined,
   "fixture-result-boolean-true": true,
@@ -14,11 +26,17 @@ const resultClaims = {
 const provider = createServer(async (req, res) => {
   const u = new URL(req.url, "http://provider");
   if (req.method === "GET" && u.pathname.endsWith("/auth")) {
+    authNonce = u.searchParams.get("nonce");
     const target = new URL(u.searchParams.get("redirect_uri"));
     target.searchParams.set("code", "browser-fixture-code");
     target.searchParams.set("state", u.searchParams.get("state"));
     res.writeHead(302, { Location: target.href });
     res.end();
+    return;
+  }
+  if (u.pathname.endsWith("/certs")) {
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ keys: [jwk] }));
     return;
   }
   let raw = "";
@@ -48,6 +66,20 @@ const provider = createServer(async (req, res) => {
   } else if (u.pathname.endsWith("/token"))
     res.end(
       JSON.stringify({
+        ...(body.grant_type === "authorization_code"
+          ? {
+              id_token: jwt.sign({ nonce: authNonce }, privateKey, {
+                algorithm: "RS256",
+                keyid: "fixture",
+                issuer:
+                  `http://127.0.0.1:${provider.address().port}` +
+                  u.pathname.split("/protocol/openid-connect/")[0],
+                audience: body.client_id,
+                subject: "browser-user",
+                expiresIn: 60,
+              }),
+            }
+          : {}),
         token_type: "Bearer",
         access_token: Object.hasOwn(resultClaims, body.code)
           ? body.code

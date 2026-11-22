@@ -29,13 +29,13 @@ The login UI uses `/auth/prepare` before `/auth/start`; calling the old start UR
 | `GET /api/config` | Public configuration; credentials are omitted. |
 | `GET /api/geoip` | Approximate country and resolved client IP; default country used on lookup miss. |
 | `POST /auth/mobile/login` | Exchange supplied `client_id`, `server_id`, `code` and `redirect_uri`; returns `auth_server` plus userinfo. Does not create a browser session. |
-| `POST /auth/s2s/signin` | Read previously cached raw userinfo by `state`; cache miss is an empty 401. This is not a new code exchange. |
+| `POST /auth/s2s/signin` | Read previously cached raw userinfo once by `state` within 10 minutes; a missing, consumed or expired result returns an empty 401. This is not a new code exchange. |
 | `POST /sms/auth`, `/sms/token` | Start SMS and exchange OTP. See [SMS](sms.md). |
 | `POST /ts43/auth`, `/ts43/token` | Start SIM credential request and exchange credential. See [SIM](sim.md). `/ts43/auth` can return 429. |
 | `POST /sms/log`, `/ts43/log` | Diagnostic endpoints; not provider integration steps. Avoid sending sensitive information. |
 | `GET /health/live` | Process liveness. |
 | `GET /health/ready` | Checks runtime configuration; returns 503 when unavailable. |
-| `POST /api/play-integrity/attempt`, `/verify`, `/token-exchange` | Optional Play Integrity flow; full paths share `/api/play-integrity`. Disabled endpoints return 404 unless `PLAY_INTEGRITY_ENABLED=true`. See [Play Integrity](../PLAY_INTEGRITY_IPIFICATION_DEMO.md); verify its deployment assumptions against Express code. |
+| `POST /api/play-integrity/attempt`, `/verify`, `/token-exchange` | Play Integrity flow; full paths share `/api/play-integrity`. Verification always invokes Google and fails closed when configuration or verification is unavailable. |
 
 For request examples, response behavior and security boundaries, see [Mobile and S2S](mobile-s2s.md).
 

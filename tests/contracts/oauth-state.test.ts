@@ -1,6 +1,6 @@
 import { test, expect } from "vitest";
 import { startApp } from "../helpers/processes";
-import { startProvider } from "../helpers/provider";
+import { startProvider, providerNonces } from "../helpers/provider";
 import { prepareAttempt } from "../helpers/auth-attempt";
 import { configFixture } from "../helpers/config";
 
@@ -145,6 +145,8 @@ test("QR has two minutes to scan and a separate five-minute completion window", 
     expect(direct.cookie).toContain("Max-Age=300");
     const started = await fetch(qr.url, { redirect: "manual" });
     expect(started.headers.get("set-cookie")).toContain("Max-Age=300");
+    const location = new URL(started.headers.get("location")!);
+    providerNonces.set(location.origin, location.searchParams.get("nonce")!);
     const scanner = started.headers.get("set-cookie")!.split(";")[0];
     const owner = qr.cookie.split(";")[0];
     // Starting replaces the scan deadline with a fresh completion deadline.

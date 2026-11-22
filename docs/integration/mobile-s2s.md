@@ -95,9 +95,11 @@ A successful read returns the cached raw userinfo without adding `auth_server`:
 }
 ```
 
-A missing or expired result returns HTTP 401 with an **empty body**, so do not parse every response as JSON. A 401 can also mean the callback has not stored the result yet; it does not distinguish pending, failed and expired attempts. Results have a one-hour TTL and reads do not consume them. TTL is an upper bound, not a guarantee of availability.
+A missing, consumed or expired result returns HTTP 401 with an **empty body**, so do not parse every response as JSON. A 401 can also mean the callback has not stored the result yet; it does not distinguish pending, failed and expired attempts. Results have a maximum ten-minute TTL; the first successful S2S read consumes the raw result. A rate-limited request returns 429 with `Retry-After`.
 
 Unlike `/auth/status`, this handler does not check an owner cookie or authenticated session; possession of `state` is sufficient for lookup. Protect it with appropriate service authentication and access policy, keep `state` confidential, and do not log or expose userinfo. Apply your own authorization and validation policy before using these demo endpoints in a customer system.
+
+The mobile code exchange and Play Integrity code exchange still use a generic grant with `skipSubjectCheck`: their original authorization request is not bound to a backend-stored nonce, and they do not have the browser flow's ID-token and subject checks. PKCE is not implemented. Do not treat these exchanges as equivalent to the hardened browser flow.
 
 ## Source and tests
 

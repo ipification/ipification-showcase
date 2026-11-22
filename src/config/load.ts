@@ -17,6 +17,5 @@ export interface ServerConfig {
   favicon_url?: string;
   default_country_code?: string;
   disabled_select_country?: boolean;
-  play_integrity_verify_domains?: string[];
 }
 export const getConfig = (): ServerConfig => loadRuntimeConfig();

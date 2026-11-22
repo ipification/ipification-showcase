@@ -5,8 +5,7 @@
 
 
 This demo verifies an Android Play Integrity token on the server at
-`POST /api/play-integrity/verify`. The endpoint is disabled unless
-`PLAY_INTEGRITY_ENABLED=true`.
+`POST /api/play-integrity/verify`. Verification is mandatory; missing configuration or Google verification failure does not produce a verified state.
 
 For the complete Android-to-IPification flow, use the three endpoints in this
 order: create a short-lived attempt, verify its fresh Play Integrity token,
@@ -125,27 +124,16 @@ Copy the safe examples from `.env.sample` into the deployment environment and
 set the package name to the Android application ID:
 
 ```dotenv
-PLAY_INTEGRITY_ENABLED=false
 PLAY_INTEGRITY_PACKAGE_NAME=com.example.demo
 GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/play-integrity-service-account.json
 PLAY_INTEGRITY_REQUIRE_LICENSED_APP=false
 PLAY_INTEGRITY_USER_FLOW=pvn_ip
+PLAY_INTEGRITY_STATE_SECRET=<long-random-secret>
+PLAY_INTEGRITY_STATE_ISSUER=showcase
+PLAY_INTEGRITY_STATE_AUDIENCE=showcase-app
 ```
 
-Configure the domains that must use Google verification in
-`config/default.json`:
-
-```json
-{
-  "play_integrity_verify_domains": ["showcase.example.com"]
-}
-```
-
-The request hostname must exactly match one configured domain. Protocol, port,
-path, and other subdomains are not included in the match. Requests from domains
-not in the list bypass the Google verdict call while still requiring and
-consuming a valid attempt and integrity token. An empty list bypasses Google
-verification for all domains.
+Verification does not depend on the request hostname. Missing Play Integrity settings make these endpoints unavailable without blocking unrelated flows.
 
 The Google Cloud project used by the backend must be linked to the matching
 application in Google Play Console. Enable the Play Integrity API in that

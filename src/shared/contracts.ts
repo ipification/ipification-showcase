@@ -39,6 +39,7 @@ export interface DisplayResult {
 }
 export interface SessionData {
   isAuthenticated: boolean;
+  displayErrorOnly?: boolean;
   userData?: DisplayResult;
   errorMessage?: string;
 }

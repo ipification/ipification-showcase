@@ -58,7 +58,7 @@ function setup() {
     }),
   };
 }
-test("only configured verification hostname invokes verifier and preserves signed-state output", async () => {
+test("every hostname invokes the verifier and preserves signed-state output", async () => {
   const s = setup();
   expect(
     await s.service.execute("verify", s.context, {
@@ -77,7 +77,7 @@ test("only configured verification hostname invokes verifier and preserves signe
     { ...s.context, hostname: "bypass.example" },
     { attempt_id: "attempt", integrity_token: "opaque" },
   );
-  expect(s.verify).not.toHaveBeenCalled();
+  expect(s.verify).toHaveBeenCalledTimes(1);
 });
 test("policy denial rejects the attempt, while verifier outages retain their reason", async () => {
   const s = setup();

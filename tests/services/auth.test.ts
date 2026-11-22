@@ -1,7 +1,13 @@
 import { expect, test, vi } from "vitest";
 import { createAuthService } from "@/modules/browser-auth/service";
+import { decodePrepare } from "@/modules/browser-auth/input";
+import type { AuthAttempt } from "@/modules/browser-auth/attempts";
 import { serviceContext as context } from "../helpers/service-context";
-import { decodeStart, decodeCallback, decodeMobile } from "@/modules/browser-auth/input";
+import {
+  decodeStart,
+  decodeCallback,
+  decodeMobile,
+} from "@/modules/browser-auth/input";
 function setup() {
   const calls: string[] = [];
   const results = {
@@ -33,6 +39,7 @@ function setup() {
     origin: context.origin,
     qr: true,
     ownerHash: "hash",
+    nonce: "fixture-nonce",
     status: "processing" as const,
     expiresAt: Date.now() + 300000,
   };
@@ -60,6 +67,48 @@ function setup() {
     }),
   };
 }
+test("each browser attempt stores an independent nonce", async () => {
+  const s = setup();
+  const input = decodePrepare({
+    user_flow: "login_ip",
+    server_id: "stage",
+    qr: false,
+  });
+  await s.service.prepareWebAuthentication(context, input, "a".repeat(64));
+  await s.service.prepareWebAuthentication(context, input, "a".repeat(64));
+  const calls = s.attempts.create.mock.calls as unknown as Array<[AuthAttempt]>;
+  expect(calls[0][0].nonce).toBeTruthy();
+  expect(calls[1][0].nonce).not.toBe(calls[0][0].nonce);
+});
+test("interleaved callbacks exchange with the nonce belonging to each attempt", async () => {
+  const s = setup();
+  const record = await s.attempts.claimCallback();
+  s.attempts.claimCallback
+    .mockResolvedValueOnce({ ...record, state: "state-b", nonce: "nonce-b" })
+    .mockResolvedValueOnce({ ...record, state: "state-a", nonce: "nonce-a" });
+  for (const state of ["state-b", "state-a"]) {
+    await s.service.handleAuthorizationCallback(context, {
+      ...decodeCallback({ code: "c", state }),
+      userFlow: "login_ip",
+      serverId: "stage",
+      previousSessionId: "",
+      backchannel: false,
+      callbackBinding: "callback",
+    });
+  }
+  expect(s.provider.exchangeAuthorizationCode).toHaveBeenNthCalledWith(
+    1,
+    expect.objectContaining({
+      browser: { state: "state-b", nonce: "nonce-b" },
+    }),
+  );
+  expect(s.provider.exchangeAuthorizationCode).toHaveBeenNthCalledWith(
+    2,
+    expect.objectContaining({
+      browser: { state: "state-a", nonce: "nonce-a" },
+    }),
+  );
+});
 test("authorization validates target before claiming and uses the stored phone/state", async () => {
   const { service, provider, attempts } = setup();
   const binding = { owner: "owner", callback: "callback" };

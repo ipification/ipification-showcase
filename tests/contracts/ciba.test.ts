@@ -2,6 +2,41 @@ import { test, expect } from "vitest";
 import { startApp, freePort } from "../helpers/processes";
 import { startProvider } from "../helpers/provider";
 import { configFixture } from "../helpers/config";
+
+test("SMS rate limit blocks further upstream attempts", async () => {
+  const provider = await startProvider();
+  const config = configFixture({
+    auth_servers: [{ id: "stage", url: provider.url }],
+  });
+  const app = await startApp({
+    NODE_CONFIG_DIR: config.dir,
+    AUTH_RATE_LIMIT_IDENTITY_MAX: "2",
+  });
+  try {
+    const send = () =>
+      fetch(app.url + "/sms/auth", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          client_id: "fixture-client",
+          server_id: "stage",
+          login_hint: "+12025550123",
+        }),
+      });
+    expect((await send()).status).toBe(200);
+    expect((await send()).status).toBe(200);
+    const blocked = await send();
+    expect(blocked.status).toBe(429);
+    expect(blocked.headers.get("retry-after")).toBeTruthy();
+    expect(
+      provider.calls.filter((call) => call.operation === "auth"),
+    ).toHaveLength(2);
+  } finally {
+    await app.stop();
+    config.remove();
+    await provider.stop();
+  }
+});
 test("CIBA endpoints preserve provider order, token error sessions and protocol payloads", async () => {
   const provider = await startProvider();
   const config = configFixture({
