@@ -9,7 +9,7 @@ import { storage, groups, needsPhone, esc } from "./showcase/config.js";
 
 const container = document.querySelector("#showcase");
 try {
-  const response = await fetch("/api/showcase-config", { cache: "no-store" });
+  const response = await fetch("/api/config", { cache: "no-store" });
   if (!response.ok) throw new Error("Unable to load showcase configuration");
   const config = await response.json();
   let defaultCountry = config.defaultCountry || "rs";

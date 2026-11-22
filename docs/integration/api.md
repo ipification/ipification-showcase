@@ -26,7 +26,7 @@ The login UI uses `/auth/prepare` before `/auth/start`; calling the old start UR
 
 | Method and path | Purpose |
 | --- | --- |
-| `GET /api/config` | Public configuration; credentials are omitted. |
+| `GET /api/config` | Public configuration for API clients and the showcase UI, including locale, labels, enabled clients and presentation settings; credentials are omitted. |
 | `GET /api/geoip` | Approximate country and resolved client IP; default country used on lookup miss. |
 | `POST /auth/mobile/login` | Exchange supplied `client_id`, `server_id`, `code` and `redirect_uri`; returns `auth_server` plus userinfo. Does not create a browser session. |
 | `POST /auth/s2s/signin` | Read previously cached raw userinfo once by `state` within 10 minutes; a missing, consumed or expired result returns an empty 401. This is not a new code exchange. |
@@ -42,5 +42,3 @@ For request examples, response behavior and security boundaries, see [Mobile and
 In the SMS and TS43 rows, each second path has the same prefix shown in its first path. `/auth/mobile/login` and `/auth/s2s/signin` preserve demo API contracts; their existence does not establish an authorization policy suitable for arbitrary internet-facing clients. Review access controls and protect sensitive requests in your deployment.
 
 For CIBA responses, a successful start includes `auth_server`, `auth_req_id`, `nonce`, and for SIM `digital_request`. Token success returns `auth_server` and provider userinfo. Failures can return JSON or, for some auth errors, text. Session creation can occur for error data; it does not prove verification. See the [SMS controller](../../src/modules/sms/controller.ts) and [SIM controller](../../src/modules/sim/controller.ts).
-
-The demo frontend also reads `GET /api/showcase-config` for public UI configuration, labels and enabled clients. It contains no configured client secret.

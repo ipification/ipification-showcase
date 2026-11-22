@@ -101,7 +101,7 @@ test("phone input has no surrounding outline for pointer entry and retains keybo
 test("GeoIP fallback and configured country lock are respected", async ({
   page,
 }) => {
-  await page.route("**/api/showcase-config", async (route) => {
+  await page.route("**/api/config", async (route) => {
     const response = await route.fetch();
     const config = await response.json();
     delete config.defaultCountry;

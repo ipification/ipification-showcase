@@ -5,7 +5,7 @@ test("legacy single-column layout and Identity content order remain usable", asy
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.route("**/api/showcase-config", async (route) => {
+  await page.route("**/api/config", async (route) => {
     const response = await route.fetch();
     const config = await response.json();
     config.locale.app.name = "IPification features showcase";
@@ -108,7 +108,7 @@ test("inline stage country picker still switches between Wonderland and a real c
 test("stage country names and Wonderland reset remain correct after changing tabs", async ({
   page,
 }) => {
-  await page.route("**/api/showcase-config", async (route) => {
+  await page.route("**/api/config", async (route) => {
     const response = await route.fetch();
     const config = await response.json();
     config.appEnv = "stage";

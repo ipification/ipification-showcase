@@ -1,10 +1,6 @@
 import { requestMiddleware } from "@/middleware/request";
 import express from "express";
 import path from "node:path";
-import { getConfig } from "@/config/load";
-import { toPublicShowcaseConfig } from "@/config/public";
-import { resolveContext } from "@/shared/server/http/context";
-import { toWebRequest } from "@/shared/server/express/http";
 import { userInfo, qrError, authError } from "@/modules/showcase/pages";
 import { router as showcaseRouter } from "@/modules/showcase/routes";
 import { router as browserauthRouter } from "@/modules/browser-auth/routes";
@@ -26,18 +22,6 @@ export function createApp() {
   app.use(smsRouter);
   app.use(simRouter);
   app.use(playintegrityRouter);
-  app.get("/api/showcase-config", (req, res) => {
-    try {
-      const request = toWebRequest(req);
-      res
-        .set("Cache-Control", "private, no-store")
-        .json(
-          toPublicShowcaseConfig(getConfig(), resolveContext(request).origin),
-        );
-    } catch {
-      res.status(503).json({ error: "SERVICE_UNAVAILABLE" });
-    }
-  });
   app.get("/auth/pending", (_req, res) => res.render("showcase/pending"));
   app.get("/auth/login", (_req, res) => res.render("showcase/login"));
   app.use(

@@ -108,7 +108,7 @@ test("initial tab prefers hash over saved preference", async ({ page }) => {
 test("configured title, favicon and logo styling are reflected in the page", async ({
   page,
 }) => {
-  await page.route("**/api/showcase-config", async (route) => {
+  await page.route("**/api/config", async (route) => {
     const response = await route.fetch();
     const config = await response.json();
     Object.assign(config, {

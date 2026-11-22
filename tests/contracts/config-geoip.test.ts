@@ -5,6 +5,7 @@ test("mounted configuration is redacted and geoip retains fallback country", asy
   const config = configFixture({ default_country_code: "vn" });
   const app = await startApp({
     NODE_CONFIG_DIR: config.dir,
+    APP_ENV: "development",
   });
   try {
     const r = await fetch(app.url + "/api/config");
@@ -14,11 +15,17 @@ test("mounted configuration is redacted and geoip retains fallback country", asy
     ).toBe(200);
     const data = await r.json();
     expect(data.version).toBe("1.2.17-SNAPSHOT");
+    expect(data.locale.app.name).toBe("IPification features showcase");
+    expect(data.appEnv).toBe("development");
+    expect(data.defaultCountry).toBe("vn");
+    expect(data.disabledSelectCountry).toBe(false);
+    expect(data.faviconUrl).toBe("/images/logo.ico");
     expect(data.clients[0].client_id).toBe("fixture-client");
     expect(data.clients[0].redirect_uri).toBe(
       app.url + "/auth/callback/pvn_ip/stage",
     );
     expect(JSON.stringify(data)).not.toContain("fixture-secret");
+    expect((await fetch(app.url + "/api/showcase-config")).status).toBe(404);
     const geo = await (await fetch(app.url + "/api/geoip")).json();
     expect(geo.country).toBe("vn");
   } finally {

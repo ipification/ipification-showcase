@@ -4,7 +4,7 @@ import { configFixture } from "../tests/helpers/config";
 test("stage country dropdown supports search and keeps Wonderland", async ({
   page,
 }) => {
-  await page.route("**/api/showcase-config", async (route) => {
+  await page.route("**/api/config", async (route) => {
     const response = await route.fetch();
     const config = await response.json();
     config.appEnv = "stage";
@@ -25,7 +25,7 @@ test("stage country dropdown supports search and keeps Wonderland", async ({
 test("stage country search supports keyboard selection and Escape", async ({
   page,
 }) => {
-  await page.route("**/api/showcase-config", async (route) => {
+  await page.route("**/api/config", async (route) => {
     const response = await route.fetch();
     const config = await response.json();
     config.appEnv = "stage";
@@ -52,7 +52,7 @@ test("stage country search supports keyboard selection and Escape", async ({
 test("stage prefix is vertically centered and country focus is visible only for keyboard", async ({
   page,
 }) => {
-  await page.route("**/api/showcase-config", async (route) => {
+  await page.route("**/api/config", async (route) => {
     const response = await route.fetch();
     const config = await response.json();
     config.appEnv = "stage";
