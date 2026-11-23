@@ -1,7 +1,7 @@
 /** @module SIM verification */
 
 import { sessionId } from "@/shared/server/session/cookies";
-import { requestFailure } from "@/shared/server/http/response";
+import { json, requestFailure } from "@/shared/server/http/response";
 import { cibaService } from "@/shared/server/ciba/service";
 import {
   readCibaRequest,
@@ -9,7 +9,6 @@ import {
   tokenResponse,
   operationFailure,
 } from "@/shared/server/ciba/handlers";
-import { json } from "@/shared/server/http/response";
 import {
   checkTs43Limit,
   checkAuthLimit,
@@ -29,6 +28,7 @@ export async function createSimCredentialRequest(request: Request) {
     input,
     headers: Record<string, string> = {};
   try {
+    // Parse the SIM request before applying the TS43-specific limit.
     ({ context, input } = await readCibaRequest(request));
     // Limit before resolving the client/server, as required by this endpoint.
     const limit = await checkTs43Limit(context, input);
@@ -38,6 +38,7 @@ export async function createSimCredentialRequest(request: Request) {
     return requestFailure(error);
   }
   try {
+    // Create the provider request; include rate-limit headers in this endpoint's response.
     const outcome = await cibaService.createSimCredentialRequest(
       context,
       input,
@@ -59,6 +60,7 @@ export async function createSimCredentialRequest(request: Request) {
 export async function exchangeSimCredential(request: Request) {
   let context, input;
   try {
+    // Validate the returned credential request fields and limit token submissions.
     ({ context, input } = await readCibaRequest(request));
     const limit = await checkAuthLimit("sim-token", context, input);
     if (!limit.allowed)
@@ -67,6 +69,7 @@ export async function exchangeSimCredential(request: Request) {
     return requestFailure(error);
   }
   try {
+    // Exchange the browser credential; tokenResponse returns claims and sets the demo session.
     const outcome = await cibaService.exchangeSimCredential(
       context,
       input,

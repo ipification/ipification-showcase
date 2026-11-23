@@ -15,7 +15,7 @@ function getClientCountry(request: Request) {
     const context = resolveContext(request);
     let country = context.config.default_country_code || "rs";
     try {
-      // A GeoIP match takes precedence; keep the configured fallback on a miss/error.
+      // Use GeoIP only as a phone-input suggestion; a miss must keep the configured default.
       country = geoip.lookup(context.clientIp)?.country || country;
     } catch {
       // GeoIP is a convenience for the phone input and must not block the page.

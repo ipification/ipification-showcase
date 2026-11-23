@@ -7,6 +7,7 @@ import {
 import { diagnostics } from "@/shared/server/ciba/handlers";
 
 export const router = Router();
+// /auth creates the SIM request; /token exchanges the browser credential.
 router.post("/ts43/auth", adapt(createSimCredentialRequest));
 router.post("/ts43/token", adapt(exchangeSimCredential));
 router.post("/ts43/log", adapt(diagnostics));

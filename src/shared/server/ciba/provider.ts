@@ -37,6 +37,12 @@ export interface CibaStartResult {
   };
 }
 
+/**
+ * Requests a provider to send an SMS CIBA challenge.
+ *
+ * @param input - Provider credentials, user phone hint and requested scope.
+ * @returns Provider auth request ID and a nonce for the later OTP exchange.
+ */
 export async function sendSmsCode(input: StartInput): Promise<CibaStartResult> {
   const root = `${input.authServerUrl}/realms/${input.realm}/protocol/openid-connect`;
   const nonce = randomUUID();
@@ -53,6 +59,12 @@ export async function sendSmsCode(input: StartInput): Promise<CibaStartResult> {
   return { authReqId, nonce };
 }
 
+/**
+ * Submits an OTP to the provider and exchanges the CIBA request for userinfo.
+ *
+ * @param input - Provider credentials, auth request ID and submitted SMS code.
+ * @returns Provider user claims after the token and userinfo requests succeed.
+ */
 export async function verifySmsCode(input: TokenInput) {
   const root = `${input.authServerUrl}/realms/${input.realm}/protocol/openid-connect`;
   // 1. Submit the entered OTP for the same CIBA authentication request.
@@ -63,6 +75,12 @@ export async function verifySmsCode(input: TokenInput) {
   return exchangeCibaTokenAndGetUserInfo(root, input);
 }
 
+/**
+ * Starts SIM CIBA and builds the digital credential request for the browser.
+ *
+ * @param input - Provider credentials, user/carrier hints and optional operation.
+ * @returns Auth request ID, nonce and digital request payload.
+ */
 export async function createSimCredentialRequest(
   input: StartInput,
 ): Promise<CibaStartResult> {
@@ -105,6 +123,12 @@ export async function createSimCredentialRequest(
   };
 }
 
+/**
+ * Submits a browser SIM credential and exchanges the CIBA request for userinfo.
+ *
+ * @param input - Provider credentials, auth request ID and VP token.
+ * @returns Provider user claims after the token and userinfo requests succeed.
+ */
 export async function exchangeSimCredential(input: TokenInput) {
   const root = `${input.authServerUrl}/realms/${input.realm}/protocol/openid-connect`;
   // 1. Submit the credential obtained by the browser/device.
@@ -115,6 +139,7 @@ export async function exchangeSimCredential(input: TokenInput) {
   return exchangeCibaTokenAndGetUserInfo(root, input);
 }
 
+/** @param root - Provider OIDC endpoint root. @param form - CIBA authentication form fields. @returns Provider auth request ID. */
 async function requestAuthentication(
   root: string,
   form: Record<string, unknown>,
@@ -127,6 +152,7 @@ async function requestAuthentication(
   return auth.auth_req_id;
 }
 
+/** @param url - Provider callback URL. @param authReqId - CIBA request ID used as bearer token. @param body - OTP or SIM credential callback payload. @returns Resolves whether or not the best-effort callback succeeds. */
 async function submitCallback(
   url: string,
   authReqId: unknown,
@@ -142,6 +168,7 @@ async function submitCallback(
 
 // SMS and SIM share the CIBA token grant and userinfo request after their
 // respective callback. Credentials remain on the server throughout.
+/** @param root - Provider OIDC endpoint root. @param input - Credentials and auth request ID. @returns Provider userinfo claims after the CIBA token exchange. */
 async function exchangeCibaTokenAndGetUserInfo(
   root: string,
   input: TokenInput,

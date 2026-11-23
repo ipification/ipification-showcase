@@ -1,3 +1,9 @@
+/**
+ * Picks the shared fields accepted by SMS and SIM CIBA endpoints.
+ *
+ * @param input - Parsed request body.
+ * @returns Client/server IDs, hints, scope, operation, code, credential, request ID and nonce.
+ */
 export const decodeCiba = (input: Record<string, unknown>) => ({
   server_id: input.server_id,
   client_id: input.client_id,

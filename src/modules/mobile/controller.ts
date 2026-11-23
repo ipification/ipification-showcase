@@ -45,8 +45,10 @@ import { checkAuthLimit } from "@/shared/server/storage/rate-limit";
 export async function exchangeMobileCode(request: Request) {
   let context, input;
   try {
+    // Resolve the request context and keep only fields used by the mobile exchange.
     context = resolveContext(request);
     input = decodeMobile(await readBody(request));
+    // Apply the endpoint's rate limit before making a provider request.
     const limit = await checkAuthLimit("mobile", context, input);
     if (!limit.allowed)
       return json({ error: "RATE_LIMITED" }, 429, limit.headers);
@@ -54,7 +56,7 @@ export async function exchangeMobileCode(request: Request) {
     return requestFailure(error);
   }
   try {
-    // Return the exchanged user info directly; this mobile API does not set a browser session.
+    // Exchange the authorization code and return claims directly; mobile login has no browser session.
     const { server, userInfo } = await exchangeMobileAuthorizationCode(
       context,
       input,

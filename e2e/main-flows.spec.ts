@@ -71,6 +71,6 @@ test("a provider error returns to login and shows the callback message", async (
   await page.getByRole("button", { name: "IP", exact: true }).click();
   await expect(page).toHaveURL(/\/auth\/login/);
   await expect(
-    page.getByRole("dialog", { name: "access_denied" }),
+    page.getByRole("alert").filter({ hasText: "access_denied" }),
   ).toBeVisible();
 });

@@ -1,10 +1,21 @@
-import type { ServerClient } from "@/config/load";
-import type { UserInfo, AuthServer } from "@/shared/contracts";
+import type { UserInfo } from "@/shared/contracts";
+export interface ClientSnapshot {
+  id?: string;
+  client_id: string;
+  client_secret: string;
+  redirectUri: string;
+}
+export interface ServerSnapshot {
+  id?: string;
+  url: string;
+  realm: string;
+}
 export interface AttemptSnapshot {
   id: string;
+  action?: string;
   requestHash: string;
-  client: { client_id: string; client_secret: string; redirectUri: string };
-  server: { url: string; realm: string };
+  client: ClientSnapshot;
+  server: ServerSnapshot;
 }
 export interface TransactionSnapshot {
   id: string;
@@ -17,8 +28,8 @@ export interface AttemptRepository {
     phoneNumber: string;
     clientId: string;
     serverId: string;
-    resolveClient: () => ServerClient & { id: string; redirectUri: string };
-    resolveServer: () => AuthServer & { realm: string };
+    resolveClient: () => ClientSnapshot & { id: string };
+    resolveServer: () => ServerSnapshot & { id: string };
   }): Promise<{
     attemptId: string;
     requestHash: string;

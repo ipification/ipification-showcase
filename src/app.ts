@@ -5,12 +5,12 @@ import {
   router as showcaseRouter,
   resultPagesRouter,
 } from "@/modules/showcase/routes";
-import { router as browserauthRouter } from "@/modules/browser-auth/routes";
+import { router as browserAuthRouter } from "@/modules/browser-auth/routes";
 import { router as mobileRouter } from "@/modules/mobile/routes";
 import { router as s2sRouter } from "@/modules/s2s/routes";
 import { router as smsRouter } from "@/modules/sms/routes";
 import { router as simRouter } from "@/modules/sim/routes";
-import { router as playintegrityRouter } from "@/modules/play-integrity/routes";
+import { router as playIntegrityRouter } from "@/modules/play-integrity/routes";
 export function createApp() {
   const app = express();
   app.disable("x-powered-by");
@@ -18,12 +18,12 @@ export function createApp() {
   app.set("views", path.resolve("src/views"));
   app.use(requestMiddleware);
   app.use(showcaseRouter);
-  app.use(browserauthRouter);
+  app.use(browserAuthRouter);
   app.use(mobileRouter);
   app.use(s2sRouter);
   app.use(smsRouter);
   app.use(simRouter);
-  app.use(playintegrityRouter);
+  app.use(playIntegrityRouter);
   app.use(
     "/vendor/qrcode",
     express.static(path.resolve("node_modules/qrcode-generator/dist")),

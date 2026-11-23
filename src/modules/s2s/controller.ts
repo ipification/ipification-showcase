@@ -36,10 +36,11 @@ import { checkAuthLimit } from "@/shared/server/storage/rate-limit";
 async function readS2sResult(request: Request) {
   try {
     const body = await readBody(request);
+    // Limit before reading a one-time result so a throttled call does not consume it.
     const limit = await checkAuthLimit("s2s", resolveContext(request), body);
     if (!limit.allowed)
       return json({ error: "RATE_LIMITED" }, 429, limit.headers);
-    // Read the result already saved by the callback; do not exchange a code again.
+    // Consume claims saved by the browser callback; this endpoint never exchanges a code.
     const user = validState(body.state)
       ? await authResultStore.consumeUserInfo(body.state)
       : undefined;

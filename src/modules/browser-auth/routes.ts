@@ -11,6 +11,7 @@ import { GET as loginError } from "./login-error";
 import { GET as sessionRequired } from "./session-required";
 
 export const router = Router();
+// Browser endpoints are grouped here; web.ts adapts HTTP details to the auth service.
 router.get("/auth/start", adapt(startWebAuthentication));
 router.get("/auth/status", adapt(getAuthenticationStatus));
 router.get("/auth/complete", adapt(completeWebAuthentication));

@@ -35,9 +35,11 @@ export async function handleIntegrity(
   request: Request,
   endpoint: IntegrityEndpoint,
 ) {
-  const requestId = randomUUID(),
-    start = Date.now();
-  const respond = (status: number, body: Record<string, unknown>) => {
+  // Keep one ID and start time for both the response envelope and its audit log.
+  const requestId = randomUUID();
+  const startedAt = Date.now();
+  /** @param status - HTTP status to send. @param body - Response fields. @returns Logged JSON response with request duration. */
+  const logAndRespond = (status: number, body: Record<string, unknown>) => {
     logRequest({
       requestId,
       endpoint,
@@ -49,48 +51,58 @@ export async function handleIntegrity(
             ? "allow"
             : "deny",
       reasonCodes: Array.isArray(body.reason_codes) ? body.reason_codes : [],
-      duration: Date.now() - start,
+      duration: Date.now() - startedAt,
     });
     return json(body, status);
   };
-  const deny = (status: number, reason: string, decision = "deny") =>
-    respond(status, {
+  /** @param status - HTTP status to send. @param reason - Stable reason code. @param decision - Optional decision label. @returns Logged denial response. */
+  const rejectWithReason = (
+    status: number,
+    reason: string,
+    decision = "deny",
+  ) =>
+    logAndRespond(status, {
       request_id: requestId,
       decision,
       reason_codes: [reason],
     });
-  let body;
+  let requestBody;
   try {
-    body = await readBody(request, 16384);
+    // Reject oversized or malformed bodies before creating the runtime services.
+    requestBody = await readBody(request, 16384);
   } catch {
-    return deny(400, "INVALID_REQUEST");
+    return rejectWithReason(400, "INVALID_REQUEST");
   }
   try {
+    // Resolve request-specific config, execute the selected operation, then map its result to HTTP.
     const context = resolveContext(request),
       service = runtimeIntegrityService();
-    const outcome = await service.execute(endpoint, context, body);
+    const outcome = await service.execute(endpoint, context, requestBody);
     switch (outcome.kind) {
       case "denied":
-        return respond(denialStatus[outcome.category], {
+        return logAndRespond(denialStatus[outcome.category], {
           request_id: requestId,
           decision: outcome.decision,
           reason_codes: outcome.reasonCodes,
         });
       case "created":
-        return respond(201, {
+        return logAndRespond(201, {
           attempt_id: outcome.attemptId,
           request_hash: outcome.requestHash,
           expires_at: outcome.expiresAt,
         });
       case "verified":
-        return respond(201, {
+        return logAndRespond(201, {
           state: outcome.state,
           expires_at: outcome.expiresAt,
         });
       case "exchanged":
-        return respond(200, { decision: "allow", user_info: outcome.userInfo });
+        return logAndRespond(200, {
+          decision: "allow",
+          user_info: outcome.userInfo,
+        });
     }
   } catch {
-    return deny(503, "SERVICE_UNAVAILABLE", "unavailable");
+    return rejectWithReason(503, "SERVICE_UNAVAILABLE", "unavailable");
   }
 }

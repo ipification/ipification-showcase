@@ -34,9 +34,12 @@ export async function prepareWebAuthentication(request: Request) {
       request.headers.get("content-type")?.split(";")[0] !== "application/json"
     )
       return json({ error: "INVALID_REQUEST" }, 400);
+    // Issue the owner binding before creating the attempt; the same cookie is needed
+    // when this browser later checks status and claims the result.
     // The initiating browser keeps this owner cookie; the phone scanning a QR gets
     // a separate callback cookie when it opens /auth/start.
     const owner = newBinding();
+    // Decode only the supported request fields and keep the HTTP body size bounded.
     const prepared = await authService.prepareWebAuthentication(
       context,
       decodePrepare(await readBody(request, 16384)),
@@ -71,34 +74,36 @@ export async function prepareWebAuthentication(request: Request) {
  */
 export async function startWebAuthentication(request: Request) {
   try {
-    const context = resolveContext(request),
-      input = decodeStart(query(request));
-    const callback = newBinding();
-    const outcome = await authService.startWebAuthentication(context, input, {
-      owner: authBinding(request, "owner", input.state),
-      callback,
+    const context = resolveContext(request);
+    const input = decodeStart(query(request));
+
+    // The owner started the flow. For QR, the phone opening the link is a different browser.
+    const ownerCookie = authBinding(request, "owner", input.state);
+    const callbackToken = newBinding();
+    const authorization = await authService.startPreparedAttempt(context, input, {
+      owner: ownerCookie,
+      callback: callbackToken,
     });
+
+    // Bind the browser that follows this redirect to the later provider callback.
+    const redirect = legacyRedirect(authorization.url);
     return setAuthBinding(
-      legacyRedirect(outcome.url),
+      redirect,
       "callback",
-      outcome.state,
-      callback,
+      authorization.state,
+      callbackToken,
       context.origin,
     );
   } catch (error) {
     if (error instanceof AuthAttemptError)
       return callbackFailure(request, error);
-    if (error instanceof ApplicationError)
-      return error.code === "CLIENT_NOT_FOUND"
-        ? text("Client not found")
-        : json(
-            {
-              error: error.input
-                ? "INVALID_SERVER_ID"
-                : "NO_AUTH_SERVERS_CONFIGURED",
-            },
-            400,
-          );
+    if (error instanceof ApplicationError) {
+      if (error.code === "CLIENT_NOT_FOUND") return text("Client not found");
+      const reason = error.input
+        ? "INVALID_SERVER_ID"
+        : "NO_AUTH_SERVERS_CONFIGURED";
+      return json({ error: reason }, 400);
+    }
     return unavailable();
   }
 }
@@ -107,13 +112,15 @@ export async function startWebAuthentication(request: Request) {
  * `GET /auth/callback/:userFlow/:serverId` handles the authorization server's callback.
  *
  * @param request - The provider redirect with `state`, `code` or error fields.
+ * @param routeParams - Flow name and authorization server ID from the callback path.
  * @returns A browser redirect, or an empty HTTP 200 for a successful IM
  *   backchannel callback.
  */
 export async function handleAuthorizationCallback(
   request: Request,
-  { userFlow, serverId }: { userFlow: string; serverId: string },
+  routeParams: { userFlow: string; serverId: string },
 ) {
+  const { userFlow, serverId } = routeParams;
   let context;
   try {
     context = resolveContext(request);
@@ -129,6 +136,7 @@ export async function handleAuthorizationCallback(
     callbackBinding: "",
   };
   input.callbackBinding = authBinding(request, "callback", input.state);
+  // Clear the one-use callback cookie after handling the provider's browser redirect.
   const finish = (response: Response) =>
     input.backchannel
       ? response
@@ -141,6 +149,7 @@ export async function handleAuthorizationCallback(
           true,
         );
   try {
+    // Translate the service outcome into the appropriate page or backchannel response.
     const outcome = await authService.handleAuthorizationCallback(
       context,
       input,
@@ -197,6 +206,7 @@ export async function completeWebAuthentication(request: Request) {
   try {
     const context = resolveContext(request),
       state = query(request).state;
+    // The service checks the owner binding and creates a one-use display session.
     const outcome = await authService.completeWebAuthentication(
       context,
       state,

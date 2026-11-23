@@ -13,6 +13,7 @@ import { json, unavailable } from "@/shared/server/http/response";
  */
 function getPublicConfig(request: Request) {
   try {
+    // Return only the public projection; server secrets never leave this endpoint.
     const context = resolveContext(request);
     return json(toPublicShowcaseConfig(context.config, context.origin));
   } catch {

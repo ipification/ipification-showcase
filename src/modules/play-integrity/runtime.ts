@@ -3,8 +3,14 @@ import { createPlayIntegrityService } from "./verifier";
 import { exchangeCodeAndGetUserInfo } from "@/shared/server/common/http-client";
 import { createIntegrityService } from "./service";
 import { validateFeatureEnvironment } from "../../../runtime/config.mjs";
-/** Composition root: environment and concrete adapters stay outside the service. */
+/**
+ * Builds a request-ready service from validated environment settings and real adapters.
+ *
+ * @returns The Play Integrity service used by the HTTP handler.
+ * @throws When required feature configuration is missing or invalid.
+ */
 export function runtimeIntegrityService() {
+  // Validate feature configuration before constructing the adapters used by a request.
   validateFeatureEnvironment();
   const packageName = process.env.PLAY_INTEGRITY_PACKAGE_NAME;
   return createIntegrityService({

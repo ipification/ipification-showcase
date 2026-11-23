@@ -10,7 +10,14 @@ import {
   type AuthFailureReason,
 } from "@/shared/auth-failures";
 import { json, legacyRedirect } from "@/shared/server/http/response";
+/**
+ * Maps an internal or provider error to safe fields for logs and the error page.
+ *
+ * @param error - The thrown error from callback validation or provider exchange.
+ * @returns A stable reason and stage, with optional HTTP status and safe provider code.
+ */
 export function describeAuthFailure(error: unknown) {
+  // Convert internal/provider errors to a small safe shape; never expose raw payloads.
   if (error instanceof AuthAttemptError)
     return {
       reason: error.reason,
@@ -64,7 +71,15 @@ export function describeAuthFailure(error: unknown) {
   }
   return { reason, stage, status, providerCode };
 }
+/**
+ * Logs a callback failure and returns the browser or backchannel response.
+ *
+ * @param request - Callback request; its backchannel header selects the response format.
+ * @param error - The error to summarize without exposing raw provider data.
+ * @returns HTTP 400 JSON for backchannel calls or a redirect to the Showcase error page.
+ */
 export function callbackFailure(request: Request, error: unknown) {
+  // Give support a reference ID while returning only safe error details to the caller.
   const failure = describeAuthFailure(error);
   const reference = randomUUID();
   // Do not log Axios errors/config/data: these contain codes, secrets and tokens.

@@ -58,6 +58,17 @@ The backend uses [`openid-client`](https://github.com/panva/openid-client) for c
 
 For browser authorization, the showcase uses `authorizationCodeGrant` with the attempt's expected state and nonce, validates the ID token signature using the issuer's JWKS, and matches the UserInfo subject to the validated ID token subject. No fallback is used if validation fails. The authorization server must return an ID token and expose its signing keys at its OIDC certs endpoint. Browser authorization does not currently use PKCE; this leaves additional authorization-code interception and injection risk. Mobile code exchange and Play Integrity code exchange use a separate generic grant and do not have the browser attempt's nonce binding; see [Mobile and S2S](mobile-s2s.md). SMS/SIM retain their CIBA-specific HTTP flow. Configuration requires HTTPS except for same-origin loopback test fixtures.
 
+## Follow `/auth/start` in the code
+
+The browser opens the `url` returned by `/auth/prepare`. For QR, the phone opens the same URL while the desktop keeps the owner cookie.
+
+1. [`startWebAuthentication`](../../src/modules/browser-auth/web.ts) reads the request and owner cookie, then creates a callback token for the browser opening the link.
+2. [`startPreparedAttempt`](../../src/modules/browser-auth/service.ts) resolves the configured client and server, then starts the saved attempt. The [attempt repository](../../src/modules/browser-auth/attempts.ts) checks its state, expiry and bindings before marking it `started`.
+3. [`buildAuthorizationUrl`](../../src/modules/browser-auth/provider.ts) creates the IPification authorization URL using the saved state, nonce and phone.
+4. The HTTP handler sets the callback cookie and redirects to that URL. The later callback verifies its binding before exchanging the code.
+
+These attempts and cookies protect this showcase's browser/QR flow. They are not IPification endpoint requirements; an integration should implement equivalent protection using its own session design.
+
 ## Read the result correctly
 
 Preserve the provider's userinfo response. `phone_number_verified` can be absent; absence is not a positive verification. If present, use the provider's documented type and meaning; the demo displays explanatory text whenever the field is present, including guidance for `true`, `false`, and other values. A demo display session alone is not proof of phone verification. The caller must apply its own verification policy to the provider result.

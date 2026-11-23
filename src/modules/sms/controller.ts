@@ -1,8 +1,7 @@
 /** @module SMS verification */
 
 import { sessionId } from "@/shared/server/session/cookies";
-import { requestFailure } from "@/shared/server/http/response";
-import { json } from "@/shared/server/http/response";
+import { json, requestFailure } from "@/shared/server/http/response";
 import { checkAuthLimit } from "@/shared/server/storage/rate-limit";
 import { cibaService } from "@/shared/server/ciba/service";
 import {
@@ -24,6 +23,7 @@ import {
 export async function sendSmsCode(request: Request) {
   let context, input;
   try {
+    // Parse common CIBA fields and reject requests that exceed this endpoint's rate limit.
     ({ context, input } = await readCibaRequest(request));
     const limit = await checkAuthLimit("sms-auth", context, input);
     if (!limit.allowed)
@@ -32,6 +32,7 @@ export async function sendSmsCode(request: Request) {
     return requestFailure(error);
   }
   try {
+    // Ask the shared CIBA service to create the provider SMS challenge.
     const outcome = await cibaService.sendSmsCode(context, input);
     return startResponse(outcome);
   } catch (error) {
@@ -51,6 +52,7 @@ export async function sendSmsCode(request: Request) {
 export async function verifySmsCode(request: Request) {
   let context, input;
   try {
+    // Read the same challenge fields so the provider request stays tied to /sms/auth.
     ({ context, input } = await readCibaRequest(request));
     const limit = await checkAuthLimit("sms-token", context, input);
     if (!limit.allowed)
@@ -59,6 +61,7 @@ export async function verifySmsCode(request: Request) {
     return requestFailure(error);
   }
   try {
+    // Exchange the submitted OTP; tokenResponse also sets the Showcase result session.
     const outcome = await cibaService.verifySmsCode(
       context,
       input,

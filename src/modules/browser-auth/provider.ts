@@ -1,6 +1,12 @@
 import qs from "qs";
 import type { ServerClient } from "@/config/load";
 import type { AuthServer } from "@/shared/contracts";
+/**
+ * Builds the authorization URL that starts the selected provider flow.
+ *
+ * @param options - Saved client/server and attempt details used in provider parameters.
+ * @returns The provider authorization endpoint with its query parameters.
+ */
 export function buildAuthorizationUrl({
   client,
   baseUrl,
@@ -22,6 +28,7 @@ export function buildAuthorizationUrl({
   phone?: unknown;
   appEnv?: string;
 }) {
+  // Build the authorization request from saved attempt details; callback URI must match code exchange.
   // These are provider parameters; /auth/prepare and /auth/status belong to this demo.
   // Keep the callback URI identical when exchanging the authorization code.
   const params: Record<string, unknown> = {

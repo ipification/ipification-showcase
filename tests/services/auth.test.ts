@@ -108,21 +108,21 @@ test("authorization validates target before claiming and uses the stored phone/s
   const { service, provider, attempts } = setup();
   const binding = { owner: "owner", callback: "callback" };
   await expect(
-    service.startWebAuthentication(
+    service.startPreparedAttempt(
       context,
       decodeStart({ server_id: "missing" }),
       binding,
     ),
   ).rejects.toThrow("SERVER_NOT_FOUND");
   await expect(
-    service.startWebAuthentication(
+    service.startPreparedAttempt(
       context,
       decodeStart({ user_flow: "missing" }),
       binding,
     ),
   ).rejects.toThrow("CLIENT_NOT_FOUND");
   expect(attempts.start).not.toHaveBeenCalled();
-  await service.startWebAuthentication(
+  await service.startPreparedAttempt(
     context,
     decodeStart({ user_flow: "login_ip", state: "s", phone: "tampered" }),
     binding,

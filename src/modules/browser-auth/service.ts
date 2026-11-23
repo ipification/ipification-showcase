@@ -19,17 +19,26 @@ import {
   bindingHash,
   AUTH_ATTEMPT_MS,
   QR_SCAN_MS,
+  type AuthAttempt,
   type AuthAttemptRepository,
 } from "./attempts";
 import { describeAuthFailure } from "./failure";
 const genericCallbackMessage = "Unable to complete authentication.";
-function callbackMessage(error: unknown, description: unknown) {
+/**
+ * Sanitizes text returned by a provider before it is stored for display.
+ *
+ * @param error - Provider error code or short error value.
+ * @param description - Optional provider explanation.
+ * @returns Redacted, control-character-free text truncated to 500 characters, or a generic message.
+ */
+function sanitizeCallbackMessage(error: unknown, description: unknown) {
   // The provider code takes priority; redact credentials and links from displayed text.
   const value = [error, description].find(
     (item): item is string => typeof item === "string" && !!item.trim(),
   );
   if (!value) return genericCallbackMessage;
   return (
+    // Provider error text is untrusted: remove secrets, links and control chars before display.
     value
       .replace(/[\u0000-\u001f\u007f]/g, " ")
       .replace(/https?:\/\/[^\s]+/gi, "[link removed]")
@@ -58,6 +67,12 @@ export type CallbackOutcome =
   | { kind: "pending"; state: string }
   | { kind: "qr"; failed: boolean }
   | { kind: "redirect"; url: string };
+/**
+ * Creates browser authorization operations with replaceable provider and storage dependencies.
+ *
+ * @param overrides - Optional ports used to provide alternate implementations.
+ * @returns Operations for preparing, starting, completing, and checking browser attempts.
+ */
 export function createAuthService(overrides: Partial<Dependencies> = {}) {
   const ports: Dependencies = {
     provider: { buildAuthorizationUrl, exchangeAuthorizationCode },
@@ -68,11 +83,20 @@ export function createAuthService(overrides: Partial<Dependencies> = {}) {
     ...overrides,
   };
 
+  /**
+   * Creates the server-side record and start URL for a browser login attempt.
+   *
+   * @param context - Resolved application config, origin and runtime settings.
+   * @param input - Requested flow, server, phone and QR option.
+   * @param ownerToken - Random cookie token held by the initiating browser.
+   * @returns Attempt state, start URL and logical expiry time.
+   */
   async function prepareWebAuthentication(
     context: ServiceContext,
     input: PrepareInput,
     ownerToken: string,
   ) {
+    // Step 1: resolve the configured flow and save an owner-bound attempt.
     const server = resolveServer(context, input.server_id);
     const client = resolveClient(context, { flow: input.user_flow });
     if (
@@ -82,6 +106,8 @@ export function createAuthService(overrides: Partial<Dependencies> = {}) {
       throw new AuthAttemptError("AUTH_STATE_INVALID");
     const state = ports.id() + (input.qr ? "-qrcode" : "");
     const expiresAt = Date.now() + (input.qr ? QR_SCAN_MS : AUTH_ATTEMPT_MS);
+    // Save the attempt before returning its URL so later steps can trust the saved
+    // flow, origin, nonce and owner binding instead of editable query parameters.
     await ports.attempts.create({
       state,
       userFlow: client.user_flow,
@@ -96,6 +122,7 @@ export function createAuthService(overrides: Partial<Dependencies> = {}) {
       expiresAt,
       ...(input.qr ? { scanExpiresAt: expiresAt } : {}),
     });
+    // The URL only carries the values needed to locate and start this saved attempt.
     const params = new URLSearchParams({
       user_flow: client.user_flow,
       server_id: server.id,
@@ -105,14 +132,25 @@ export function createAuthService(overrides: Partial<Dependencies> = {}) {
     return { state, url: `${context.origin}/auth/start?${params}`, expiresAt };
   }
 
-  async function startWebAuthentication(
+  /**
+   * Validates a prepared attempt and builds its provider authorization redirect.
+   *
+   * @param context - Resolved application config and request origin.
+   * @param input - Flow, server and state from the prepared start URL.
+   * @param binding - Owner and callback browser tokens.
+   * @returns Provider authorization URL and the validated attempt state.
+   */
+  async function startPreparedAttempt(
     context: ServiceContext,
     input: StartInput,
     binding: { owner: string; callback: string },
   ) {
+    // Step 2: claim the prepared attempt, then build its provider redirect.
     const server = resolveServer(context, input.server_id);
     const client = resolveClient(context, { flow: input.user_flow });
-    // A prepared attempt owns its flow, server, origin and phone; URL edits cannot change them.
+    // Validate and start the saved attempt before sending the user to IPification.
+    // The saved flow, server, origin and phone take precedence over URL edits.
+    // Atomically verify the owner and move prepared -> started; replayed links fail here.
     const attempt = await ports.attempts.start(
       input.state,
       {
@@ -124,6 +162,7 @@ export function createAuthService(overrides: Partial<Dependencies> = {}) {
       binding.owner,
       binding.callback,
     );
+    // Build the provider URL from the validated attempt, including its state and nonce.
     return {
       kind: "authorize" as const,
       state: attempt.state,
@@ -141,10 +180,101 @@ export function createAuthService(overrides: Partial<Dependencies> = {}) {
     };
   }
 
+  /**
+   * Saves a provider callback error for the browser and marks the attempt failed.
+   *
+   * @param attempt - The attempt already claimed by this callback.
+   * @param input - Callback fields and browser/session details.
+   * @param providerError - True when the provider returned an explicit error.
+   * @returns A display-session ID for browser callbacks, or undefined for backchannel callbacks.
+   */
+  async function saveCallbackFailure(
+    attempt: AuthAttempt,
+    input: CallbackInput,
+    providerError: boolean,
+  ) {
+    const message = sanitizeCallbackMessage(
+      input.error,
+      input.error_description,
+    );
+    const failure = {
+      reason: providerError
+        ? ("AUTH_CANCELLED" as const)
+        : ("AUTH_FAILED" as const),
+      stage: "application" as const,
+      callbackMessage: message,
+    };
+    // Browser callbacks need a display session for the error page; backchannel calls do not.
+    let displaySessionId: string | undefined;
+    if (!input.backchannel) {
+      const existingSession = await ports.sessions.read(input.previousSessionId);
+      displaySessionId = await ports.sessions.create(
+        {
+          ...existingSession,
+          isAuthenticated: existingSession?.isAuthenticated || false,
+          errorMessage: message,
+        },
+        input.previousSessionId,
+      );
+    }
+    // Record failure before returning, so the owner browser's status poll can finish the flow.
+    await ports.attempts.finishCallback(attempt.state, failure);
+    if (input.backchannel) throw new AuthAttemptError(failure.reason);
+    return displaySessionId;
+  }
+
+  /**
+   * Exchanges a claimed callback code, stores user claims, and completes the attempt.
+   *
+   * @param context - Resolved app context used for provider exchange.
+   * @param attempt - The claimed attempt containing its saved origin, state and nonce.
+   * @param input - Provider callback fields.
+   * @param client - Configured client whose ID must match the saved attempt.
+   * @param server - Configured authorization server.
+   * @returns Provider user claims after the result and completed state are saved.
+   */
+  async function exchangeAndSaveCallbackResult(
+    context: ServiceContext,
+    attempt: AuthAttempt,
+    input: CallbackInput,
+    client: ReturnType<typeof resolveClient>,
+    server: ReturnType<typeof resolveServer>,
+  ) {
+    if (client.client_id !== attempt.clientId)
+      throw new AuthAttemptError("AUTH_STATE_INVALID");
+    // Exchange with the callback URI saved for this attempt, plus its expected state and nonce.
+    const { userInfo } = await ports.provider.exchangeAuthorizationCode({
+      server,
+      realm: context.config.realm,
+      clientId: client.client_id,
+      clientSecret: client.client_secret,
+      redirectUri: `${attempt.origin}/auth/callback/${attempt.userFlow}/${attempt.serverId}`,
+      code: input.code,
+      browser: { state: attempt.state, nonce: attempt.nonce },
+    });
+    // Save claims before marking the attempt complete; status polling must never beat the write.
+    await ports.results.saveResult(attempt.state, {
+      userInfo,
+      client_id: client.client_id,
+      client_title: client.title || "",
+      state: attempt.state,
+    });
+    await ports.attempts.finishCallback(attempt.state, undefined, input.backchannel);
+    return userInfo;
+  }
+
+  /**
+   * Claims and processes a browser or backchannel authorization callback.
+   *
+   * @param context - Resolved app context and request origin.
+   * @param input - Provider callback plus browser binding and session metadata.
+   * @returns A typed outcome for pending, error, QR, backchannel or redirect handling.
+   */
   async function handleAuthorizationCallback(
     context: ServiceContext,
     input: CallbackInput,
   ): Promise<CallbackOutcome> {
+    // Step 3: validate and claim the callback before exchanging or saving anything.
     const providerError = [input.error, input.error_description].some(
       (value) => (typeof value === "string" ? !!value.trim() : !!value),
     );
@@ -157,6 +287,7 @@ export function createAuthService(overrides: Partial<Dependencies> = {}) {
       ? undefined
       : resolveClient(context, { flow: input.userFlow });
     // Claim before any provider call, result write or session adoption.
+    // Claim once before calling the provider or writing a result, preventing callback replay.
     const attempt = await ports.attempts.claimCallback(
       input.state,
       {
@@ -177,55 +308,24 @@ export function createAuthService(overrides: Partial<Dependencies> = {}) {
       return { kind: "pending", state: attempt.state };
     if (attempt.status === "completed")
       return { kind: "redirect", url: completionUrl };
-    let errorSession: string | undefined;
+    let errorDisplaySessionId: string | undefined;
     let userInfo;
     try {
       if (callbackError) {
-        const message = callbackMessage(input.error, input.error_description);
-        const failure = {
-          reason: providerError
-            ? ("AUTH_CANCELLED" as const)
-            : ("AUTH_FAILED" as const),
-          stage: "application" as const,
-          callbackMessage: message,
-        };
-        if (!input.backchannel) {
-          const existing = await ports.sessions.read(input.previousSessionId);
-          errorSession = await ports.sessions.create(
-            {
-              ...existing,
-              isAuthenticated: existing?.isAuthenticated || false,
-              errorMessage: message,
-            },
-            input.previousSessionId,
-          );
-        }
-        await ports.attempts.finishCallback(attempt.state, failure);
-        if (input.backchannel) throw new AuthAttemptError(failure.reason);
+        errorDisplaySessionId = await saveCallbackFailure(
+          attempt,
+          input,
+          providerError,
+        );
       } else {
-        if (client!.client_id !== attempt.clientId)
-          throw new AuthAttemptError("AUTH_STATE_INVALID");
         // 1. Exchange the code using the callback origin captured for this attempt.
-        ({ userInfo } = await ports.provider.exchangeAuthorizationCode({
-          server: server!,
-          realm: context.config.realm,
-          clientId: client!.client_id,
-          clientSecret: client!.client_secret,
-          redirectUri: `${attempt.origin}/auth/callback/${attempt.userFlow}/${attempt.serverId}`,
-          code: input.code,
-          browser: { state: attempt.state, nonce: attempt.nonce },
-        }));
         // 2. Save the result before marking the attempt terminal for status polling.
-        await ports.results.saveResult(attempt.state, {
-          userInfo,
-          client_id: client!.client_id,
-          client_title: client!.title || "",
-          state: attempt.state,
-        });
-        await ports.attempts.finishCallback(
-          attempt.state,
-          undefined,
-          input.backchannel,
+        userInfo = await exchangeAndSaveCallbackResult(
+          context,
+          attempt,
+          input,
+          client!,
+          server!,
         );
       }
     } catch (error) {
@@ -234,10 +334,10 @@ export function createAuthService(overrides: Partial<Dependencies> = {}) {
         .catch(() => {});
       throw error;
     }
-    if (errorSession)
+    if (errorDisplaySessionId)
       return {
         kind: "provider_error",
-        sessionId: errorSession,
+        sessionId: errorDisplaySessionId,
         qr: attempt.qr,
       };
     if (input.backchannel) return { kind: "backchannel" };
@@ -249,12 +349,22 @@ export function createAuthService(overrides: Partial<Dependencies> = {}) {
     return { kind: "redirect", url: completionUrl };
   }
 
+  /**
+   * Claims a finished attempt and creates the browser's result or error session.
+   *
+   * @param context - Resolved app context and request origin.
+   * @param state - Attempt state from the completion URL.
+   * @param previousId - Current Showcase session ID, if present.
+   * @param ownerToken - Initiating browser's owner binding token.
+   * @returns The new session ID on success, or a callback-error session result.
+   */
   async function completeWebAuthentication(
     context: ServiceContext,
     state: unknown,
     previousId: string,
     ownerToken: string,
   ) {
+    // Step 4: only the initiating browser can claim the display result once.
     const attempt = await ports.attempts.claimCompletion(
       state,
       ownerToken,
@@ -262,6 +372,7 @@ export function createAuthService(overrides: Partial<Dependencies> = {}) {
     );
     try {
       if (attempt.failure?.callbackMessage) {
+        // Recreate the callback error in this browser's session, then consume the attempt.
         const existing = await ports.sessions.read(previousId);
         const sessionId = await ports.sessions.create(
           {
@@ -281,9 +392,11 @@ export function createAuthService(overrides: Partial<Dependencies> = {}) {
           attempt.failure.status,
           attempt.failure.providerCode,
         );
+      // The callback stored this display result before setting the attempt to completed.
       const result = await ports.results.readDisplayResult(attempt.state);
       if (!result) throw new AuthAttemptError("AUTH_STATE_INVALID");
       // Same demo display-session policy as before; the attempt adds ownership/single use only.
+      // Create the Showcase display session from the saved claims, then mark completion consumed.
       const id = await ports.sessions.create(
         { isAuthenticated: true, userData: result },
         previousId,
@@ -298,18 +411,29 @@ export function createAuthService(overrides: Partial<Dependencies> = {}) {
     }
   }
 
+  /**
+   * Reads attempt progress for its owner without returning provider claims.
+   *
+   * @param context - Resolved app context and origin.
+   * @param state - Attempt state being polled.
+   * @param ownerToken - Initiating browser's owner binding token.
+   * @param previousSessionId - Optional display session that already completed this state.
+   * @returns Public status, expiry, start flag and completion URL when ready.
+   */
   async function getAuthenticationStatus(
     context: ServiceContext,
     state: unknown,
     ownerToken: string,
     previousSessionId = "",
   ) {
+    // Polling reports state only; it does not claim or expose the provider claims.
     // Completion clears its owner cookie; an existing display session may resume only its exact state.
     if (previousSessionId && validState(state)) {
       const session = await ports.sessions.read(previousSessionId);
       if (session?.isAuthenticated && session.userData?.state === state)
         return { status: "finished" as const, started: true };
     }
+    // Read only the owner's attempt status; claims are exposed later through completion.
     const attempt = await ports.attempts.readOwned(
       state,
       ownerToken,
@@ -332,7 +456,7 @@ export function createAuthService(overrides: Partial<Dependencies> = {}) {
 
   return {
     prepareWebAuthentication,
-    startWebAuthentication,
+    startPreparedAttempt,
     handleAuthorizationCallback,
     completeWebAuthentication,
     getAuthenticationStatus,

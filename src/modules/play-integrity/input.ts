@@ -21,13 +21,22 @@ export interface ExchangeCodeInput {
 }
 export type IntegrityInput =
   CreateAttemptInput | VerifyAttemptInput | ExchangeCodeInput;
+/** Returns true only for a non-empty string field from an untrusted request. */
 const nonempty = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0;
-/** @internal */
+/**
+ * Decodes an endpoint body into the matching internal operation.
+ *
+ * @param endpoint - Operation selected by the HTTP route.
+ * @param body - Parsed JSON fields supplied by the client.
+ * @returns A typed operation input, or `undefined` when required fields are invalid.
+ * @internal
+ */
 export function decodeIntegrity(
   endpoint: IntegrityEndpoint,
   body: Record<string, unknown>,
 ): IntegrityInput | undefined {
+  // Keep HTTP snake_case at the boundary; services receive one discriminated input shape.
   if (endpoint === "attempt")
     return nonempty(body.phone_number) && nonempty(body.server_id)
       ? {

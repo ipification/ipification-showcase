@@ -13,6 +13,12 @@ import type { ServerClient } from "@/config/load";
 import type { CibaInput } from "./input";
 import type { UserInfo, AuthServer } from "@/shared/contracts";
 type Failure = ReturnType<typeof providerFailure>;
+/**
+ * Converts a normalized provider failure to fields returned by SMS/SIM endpoints.
+ *
+ * @param failure - Provider error normalized by `providerFailure`.
+ * @returns Public error message/status and optional safe provider data.
+ */
 export const failureData = (failure: Failure) => ({
   error: failure.message,
   status: failure.status,
@@ -45,9 +51,23 @@ export type TokenOutcome =
       sessionId: string;
     };
 
+/**
+ * Creates shared operations for starting and exchanging SMS/SIM CIBA requests.
+ *
+ * @param overrides - Optional provider or session implementations.
+ * @returns The four endpoint operations used by the SMS and SIM modules.
+ */
 export function createCibaService(overrides: Partial<Dependencies> = {}) {
   const ports = { provider, sessions: sessionRepository, ...overrides };
+  /**
+   * Resolves configured client/server values and provider credentials for a request.
+   *
+   * @param context - Resolved app config and request origin.
+   * @param input - CIBA request fields containing client/server IDs.
+   * @returns Selected client/server and credentials for provider calls.
+   */
   function target(context: ServiceContext, input: CibaInput) {
+    // Resolve the client and server once so every provider call uses one config snapshot.
     const server = resolveServer(context, input.server_id);
     const client = resolveClient(context, { id: input.client_id });
     return {
@@ -62,12 +82,20 @@ export function createCibaService(overrides: Partial<Dependencies> = {}) {
     };
   }
 
+  /**
+   * Starts an SMS challenge with the provider.
+   *
+   * @param context - Resolved app configuration and request origin.
+   * @param input - Client/server IDs, phone hint and requested scope.
+   * @returns Challenge ID and nonce, or normalized provider failure details.
+   */
   async function sendSmsCode(
     context: ServiceContext,
     input: CibaInput,
   ): Promise<StartOutcome> {
     const { server, client, credentials } = target(context, input);
     try {
+      // Provider response supplies the auth request ID and nonce needed by /sms/token.
       const result = await ports.provider.sendSmsCode({
         ...credentials,
         scope: client.scope,
@@ -80,12 +108,21 @@ export function createCibaService(overrides: Partial<Dependencies> = {}) {
     }
   }
 
+  /**
+   * Submits an OTP to the provider and creates a Showcase display session.
+   *
+   * @param context - Resolved app configuration and request origin.
+   * @param input - Challenge ID, OTP, expected nonce and client/server IDs.
+   * @param previousId - Existing Showcase session ID to replace or continue.
+   * @returns Provider claims and display-session ID, or failure details and an error-display session.
+   */
   async function verifySmsCode(
     context: ServiceContext,
     input: CibaInput,
     previousId: string,
   ): Promise<TokenOutcome> {
     const { server, client, credentials } = target(context, input);
+    // The shared helper exchanges the code and creates the Showcase result session.
     return exchangeAndCreateDemoSession({
       server,
       client,
@@ -101,12 +138,20 @@ export function createCibaService(overrides: Partial<Dependencies> = {}) {
     });
   }
 
+  /**
+   * Creates the provider's SIM credential request for a browser.
+   *
+   * @param context - Resolved app configuration and request origin.
+   * @param input - Client/server IDs, phone/carrier hints, scope and operation.
+   * @returns Challenge ID, nonce and digital request, or normalized provider failure details.
+   */
   async function createSimCredentialRequest(
     context: ServiceContext,
     input: CibaInput,
   ): Promise<StartOutcome> {
     const { server, client, credentials } = target(context, input);
     try {
+      // Provider returns the auth request ID, nonce and browser-ready digital request.
       const result = await ports.provider.createSimCredentialRequest({
         ...credentials,
         scope: client.scope,
@@ -121,12 +166,21 @@ export function createCibaService(overrides: Partial<Dependencies> = {}) {
     }
   }
 
+  /**
+   * Submits a SIM credential to the provider and creates a Showcase display session.
+   *
+   * @param context - Resolved app configuration and request origin.
+   * @param input - Digital credential, challenge ID, nonce and client/server IDs.
+   * @param previousId - Existing Showcase session ID to replace or continue.
+   * @returns Provider claims and display-session ID, or failure details and an error-display session.
+   */
   async function exchangeSimCredential(
     context: ServiceContext,
     input: CibaInput,
     previousId: string,
   ): Promise<TokenOutcome> {
     const { server, client, credentials } = target(context, input);
+    // Use the common result-session path after exchanging the SIM credential.
     return exchangeAndCreateDemoSession({
       server,
       client,
@@ -142,6 +196,12 @@ export function createCibaService(overrides: Partial<Dependencies> = {}) {
     });
   }
 
+  /**
+   * Runs the selected provider exchange and stores claims/error data for Showcase display.
+   *
+   * @param options - Provider target, display labels, nonce, previous session and exchange function.
+   * @returns Success or failure data together with the session ID used by the result page.
+   */
   async function exchangeAndCreateDemoSession({
     server,
     client,
@@ -157,8 +217,10 @@ export function createCibaService(overrides: Partial<Dependencies> = {}) {
     previousId: string;
     exchange: () => Promise<UserInfo>;
   }): Promise<TokenOutcome> {
+    // Both SMS and SIM share the same exchange -> result-session response flow.
     // This session opens the Showcase result page for both success and error data.
     // isAuthenticated here is a demo-display flag, not a phone-verification policy.
+    /** @param data - Claims or safe error fields to display. @param failed - Whether to mark this as error-only display. @returns New Showcase session ID. */
     const createDemoDisplaySession = (data: UserInfo, failed = false) =>
       ports.sessions.create(
         {
