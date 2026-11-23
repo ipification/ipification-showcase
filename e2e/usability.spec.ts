@@ -117,7 +117,8 @@ test("results show the full userinfo immediately and copy the original JSON", as
   await expect(page.locator("pre")).toContainText("+12025550123");
   await expect(page.locator("pre")).toContainText("browser-user");
   await page.getByRole("button", { name: "Copy JSON", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("JSON copied");
+  await expect(page.getByRole("status").filter({ hasText: "JSON copied" }).first()).toContainText("JSON copied");
+  await expect(page.locator(".showcase-notification--success")).toContainText("JSON copied");
   expect(
     JSON.parse(await page.evaluate(() => navigator.clipboard.readText())),
   ).toEqual({
@@ -136,7 +137,7 @@ test("results show the full userinfo immediately and copy the original JSON", as
     });
   });
   await page.getByRole("button", { name: "Copy JSON", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("copy it manually");
+  await expect(page.getByRole("status").filter({ hasText: "copy it manually" })).toContainText("copy it manually");
 });
 
 test("cancelling a pending SIM credential unlocks retry and an old attempt cannot unlock the new one", async ({

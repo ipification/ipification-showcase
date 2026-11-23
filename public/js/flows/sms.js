@@ -1,17 +1,33 @@
-export function showSms(client, token, { phone, server, endFlow, jsonPost }) {
-  const dialog = document.createElement("dialog"),
-    controller = new AbortController();
+export async function showSms(client, token, { phone, server, endFlow, jsonPost, showError, isActive }) {
+  const controller = new AbortController();
+  let auth;
+  try {
+    const { response, data } = await jsonPost(
+      "/sms/auth",
+      { client_id: client.client_id, server_id: server, login_hint: phone, scope: "openid ip:phone_verify" },
+      controller.signal,
+    );
+    if (!isActive(token)) return;
+    if (!response.ok) throw new Error(errorMessage(data, "Unable to start SMS verification"));
+    if (!data?.auth_req_id || !data?.nonce) throw new Error("Unable to start SMS verification");
+    auth = { auth_req_id: data.auth_req_id, nonce: data.nonce };
+  } catch (error) {
+    if (isActive(token)) {
+      endFlow(token);
+      showError(error.message || "Unable to start SMS verification");
+    }
+    return;
+  }
+
+  const dialog = document.createElement("dialog");
   dialog.className = "showcase-dialog showcase-sms-dialog";
   dialog.dataset.slot = "dialog-content";
-  dialog.innerHTML =
-    '<header data-slot="dialog-header"><h2 data-slot="dialog-title">Enter OTP code</h2><p>Enter the verification code sent to your phone.</p></header><form><label for="sms-code">OTP code</label><input id="sms-code" autocomplete="one-time-code" inputmode="numeric" disabled><p role="status">Sending code…</p><p role="alert" hidden></p><div><button type="button">Cancel</button><button type="button" data-retry hidden>Retry</button><button type="submit" disabled>Verify</button></div></form>';
+  dialog.setAttribute("aria-labelledby", "sms-title");
+  dialog.innerHTML = '<header data-slot="dialog-header"><h2 id="sms-title" data-slot="dialog-title">Enter OTP code</h2><p>Enter the verification code sent to your phone.</p></header><form><label for="sms-code">OTP code</label><input id="sms-code" autocomplete="one-time-code" inputmode="numeric" placeholder="Enter code"><div class="showcase-sms-actions"><button type="button">Cancel</button><button type="submit" disabled>Verify</button></div></form>';
   const input = dialog.querySelector("input"),
     form = dialog.querySelector("form"),
-    error = dialog.querySelector('[role="alert"]'),
-    status = dialog.querySelector('[role="status"]'),
     submit = dialog.querySelector('[type="submit"]');
-  let auth,
-    inFlight = false;
+  let inFlight = false;
   dialog.querySelector('[type="button"]').onclick = () => {
     controller.abort();
     endFlow(token);
@@ -31,79 +47,48 @@ export function showSms(client, token, { phone, server, endFlow, jsonPost }) {
     submit.disabled = inFlight || !input.value;
   };
   async function verify(code) {
-    if (inFlight || !auth || !code) return;
+    if (inFlight || !code) return;
     inFlight = true;
     submit.disabled = true;
-    error.hidden = true;
+    submit.textContent = "Verifying…";
     try {
       const { response, data } = await jsonPost(
-        "/sms/token",
-        { ...auth, client_id: client.client_id, server_id: server, code },
-        controller.signal,
+        "/sms/token", { ...auth, client_id: client.client_id, server_id: server, code }, controller.signal,
       );
-      if (!response.ok)
-        throw new Error(
-          data.data?.error_description ||
-            data.error ||
-            "Unable to verify OTP code",
-        );
+      if (!response.ok) throw new Error(errorMessage(data, "Unable to verify OTP code"));
       location.assign("/user/info");
     } catch (e) {
       if (!controller.signal.aborted) {
-        error.textContent = e.message;
-        error.hidden = false;
+        showError(e.message || "Unable to verify OTP code");
       }
     } finally {
       inFlight = false;
-      if (!controller.signal.aborted) submit.disabled = !input.value;
+      if (!controller.signal.aborted) {
+        submit.disabled = !input.value;
+        submit.textContent = "Verify";
+      }
     }
   }
   form.onsubmit = (event) => {
     event.preventDefault();
-    if (auth && input.value) void verify(input.value);
+    if (input.value) void verify(input.value);
   };
   document.body.append(dialog);
   dialog.showModal();
-  async function sendCode() {
-    error.hidden = true;
-    status.hidden = false;
-    dialog.querySelector("[data-retry]").hidden = true;
-    try {
-      const { response, data } = await jsonPost(
-        "/sms/auth",
-        {
-          client_id: client.client_id,
-          server_id: server,
-          login_hint: phone,
-          scope: "openid ip:phone_verify",
-        },
-        controller.signal,
-      );
-      if (!response.ok)
-        throw new Error(data.error || "Unable to start SMS verification");
-      auth = { auth_req_id: data.auth_req_id, nonce: data.nonce };
-      input.disabled = false;
-      status.hidden = true;
-      input.focus();
-      if ("OTPCredential" in window && navigator.credentials?.get)
-        navigator.credentials
-          .get({ otp: { transport: ["sms"] }, signal: controller.signal })
-          .then((credential) => {
-            if (credential?.code) {
-              input.value = credential.code;
-              void verify(credential.code);
-            }
-          })
-          .catch(() => {});
-    } catch (e) {
-      if (!controller.signal.aborted) {
-        status.hidden = true;
-        error.hidden = false;
-        error.textContent = e.message;
-        dialog.querySelector("[data-retry]").hidden = false;
-      }
-    }
-  }
-  dialog.querySelector("[data-retry]").onclick = sendCode;
-  void sendCode();
+  input.focus();
+  if ("OTPCredential" in window && navigator.credentials?.get)
+    navigator.credentials
+      .get({ otp: { transport: ["sms"] }, signal: controller.signal })
+      .then((credential) => {
+        if (credential?.code && !controller.signal.aborted) {
+          input.value = credential.code.replace(/\D/g, "");
+          void verify(input.value);
+        }
+      })
+      .catch(() => {});
+}
+
+function errorMessage(data, fallback) {
+  if (typeof data === "string") return data.trim() || fallback;
+  return data?.error_description || data?.data?.error_description || data?.message || data?.error || fallback;
 }

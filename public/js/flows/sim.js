@@ -1,11 +1,10 @@
 export async function startSim(
   client,
   token,
-  { getActiveSim, setActiveSim, server, phone, container, endFlow, jsonPost },
+  { getActiveSim, setActiveSim, server, phone, container, endFlow, jsonPost, showError },
 ) {
   if (getActiveSim()) return;
   const login = client.user_flow === "login_sim",
-    alert = container.querySelector("#flow-error"),
     controller = new AbortController();
   const attempt = { controller };
   setActiveSim(attempt);
@@ -69,8 +68,7 @@ export async function startSim(
     location.assign("/user/info");
   } catch (error) {
     if (getActiveSim() === attempt) {
-      alert.textContent = error.message || "SIM verification is unavailable.";
-      alert.hidden = false;
+      showError(error.message || "SIM verification is unavailable.");
     }
   } finally {
     release();

@@ -54,12 +54,12 @@ test("callback error opens a dismissible popup on mobile", async ({ page }) => {
     route.fulfill({ json: { error_message: "msisdn_country_mismatch" } }),
   );
   await page.goto("/auth/login#pnv");
-  const dialog = page.getByRole("dialog", { name: "msisdn_country_mismatch" });
+  const dialog = page.getByRole("alert").filter({ hasText: "msisdn_country_mismatch" });
   await expect(dialog).toBeVisible();
   await expect(page.locator("[role=tab]").filter({ hasText: "PNV" })).toBeVisible();
-  await expect.poll(async () => Math.round((await dialog.boundingBox())!.y)).toBe(100);
+  await expect(dialog.getByText("Something went wrong")).toBeVisible();
   const bounds = await dialog.boundingBox();
   expect(bounds!.width).toBeLessThan(375);
-  await page.keyboard.press("Escape");
+  await dialog.getByRole("button", { name: "Dismiss notification" }).click();
   await expect(dialog).not.toBeVisible();
 });

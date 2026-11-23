@@ -1,3 +1,4 @@
+import { notifyError } from "./notification.js";
 import { showcaseMarkup } from "./showcase/markup.js";
 import { attachStageCountryPicker } from "./showcase/stage-country-picker.js";
 import intlTelInput from "/vendor/intl/js/intlTelInputWithUtils.mjs";
@@ -317,9 +318,7 @@ try {
   async function start(client) {
     if (activeFlow) return;
     if (needsPhone(client.user_flow) && !valid) {
-      const error = container.querySelector("#flow-error");
-      error.hidden = false;
-      error.textContent = config.locale.modals.phone_invalid;
+      notifyError(config.locale.modals.phone_invalid);
       return;
     }
     const token = {};
@@ -329,7 +328,7 @@ try {
       button.setAttribute("aria-busy", String(button.id === client.user_flow));
     });
     if (client.user_flow === "pvn_sms")
-      return showSms(client, token, { phone, server, endFlow, jsonPost });
+      return showSms(client, token, { phone, server, endFlow, jsonPost, showError: notifyError, isActive: (current) => activeFlow === current });
     if (client.user_flow === "pvn_sim" || client.user_flow === "login_sim")
       return startSim(client, token, {
         getActiveSim: () => activeSim,
@@ -341,6 +340,7 @@ try {
         container,
         endFlow,
         jsonPost,
+        showError: notifyError,
       });
     const mobile =
       innerWidth <= 768 || /Android|iPhone|Mobile/i.test(navigator.userAgent);
@@ -367,9 +367,7 @@ try {
       else showQr(attempt, client, token, { start, endFlow });
     } catch {
       if (!controller.signal.aborted) {
-        const error = container.querySelector("#flow-error");
-        error.hidden = false;
-        error.textContent = "Unable to open verification. Please try again.";
+        notifyError("Unable to open verification. Please try again.");
         endFlow(token);
       }
     } finally {
@@ -400,21 +398,7 @@ try {
   // Callback messages are stored in the session and consumed once.
   fetch("/auth/login/error", { cache: "no-store" })
     .then((r) => r.json())
-    .then(({ error_message: message }) => {
-      if (!message) return;
-      const dialog = document.createElement("dialog");
-      dialog.className = "showcase-callback-error";
-      dialog.setAttribute("aria-label", message);
-      const title = document.createElement("h2");
-      title.textContent = message;
-      dialog.append(title);
-      dialog.addEventListener("click", (event) => {
-        if (event.target === dialog) dialog.close();
-      });
-      dialog.addEventListener("close", () => dialog.remove());
-      document.body.append(dialog);
-      dialog.showModal();
-    })
+    .then(({ error_message: message }) => { if (message) notifyError(message); })
     .catch(() => {});
 
   async function jsonPost(url, body, signal) {
