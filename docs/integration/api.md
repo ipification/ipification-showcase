@@ -35,7 +35,7 @@ The login UI uses `/auth/prepare` before `/auth/start`; calling the old start UR
 | `POST /sms/log`, `/ts43/log` | Diagnostic endpoints; not provider integration steps. Avoid sending sensitive information. |
 | `GET /health/live` | Process liveness. |
 | `GET /health/ready` | Checks runtime configuration; returns 503 when unavailable. |
-| `POST /api/play-integrity/attempt`, `/verify`, `/token-exchange` | Play Integrity flow; full paths share `/api/play-integrity`. Verification always invokes Google and fails closed when configuration or verification is unavailable. |
+| `POST /api/play-integrity/attempt`, `/verify`, `/token-exchange` | Play Integrity flow; full paths share `/api/play-integrity`. Verification always invokes Google and fails closed when configuration or verification is unavailable. See [Play Integrity](../PLAY_INTEGRITY.md). |
 
 For request examples, response behavior and security boundaries, see [Mobile and S2S](mobile-s2s.md).
 

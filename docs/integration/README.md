@@ -13,6 +13,7 @@ This guide is the starting point for the Express showcase documentation. It expl
 | Verify an entered number with an OTP | PNV SMS | [SMS](sms.md) |
 | Start on desktop and continue on a phone | QR for supported browser flows | [QR and polling](qr.md) |
 | Exchange a mobile code or read a stored Showcase result | Mobile and S2S endpoints | [Mobile and S2S](mobile-s2s.md) |
+| Check Android app integrity before authentication | Play Integrity attempt, verification and exchange | [Play Integrity](../PLAY_INTEGRITY.md) |
 
 [Run the demo](running.md) · [Showcase HTTP endpoints](api.md)
 

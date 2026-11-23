@@ -33,6 +33,7 @@ For production, use HTTPS and configure `TRUST_PROXY_HOPS` only for the actual t
 The E2E fixture starts a local mock provider. Install Playwright's Chromium browser, then run a production build before the browser tests:
 
 ```bash
+npx playwright install chromium
 npm run build
 E2E_PORT=3103 npm run test:e2e -- e2e/main-flows.spec.ts e2e/qr.spec.ts e2e/sms.spec.ts e2e/result.spec.ts e2e/auth-error.spec.ts
 ```

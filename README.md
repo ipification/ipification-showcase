@@ -23,6 +23,6 @@ Run with Docker Compose from the repository root after configuring `config/defau
 docker compose up --build
 ```
 
-See the [integration guide](docs/integration/README.md) and [local setup and testing](docs/integration/running.md). The Playwright tests use a local mock provider and do not verify live stage or carrier behavior.
+See the [documentation index](docs/INDEX.md), [integration guide](docs/integration/README.md), [local setup and testing](docs/integration/running.md), and [Android Play Integrity guide](docs/PLAY_INTEGRITY.md). The Playwright tests use a local mock provider and do not verify live stage or carrier behavior.
 
 This demo stores authentication attempts, results and sessions in process memory. Run one instance; restarting clears the state.
