@@ -1,6 +1,6 @@
 {
   "name": "ipification-showcase",
-  "version": "1.2.21-SNAPSHOT",
+  "version": "1.2.21",
   "private": true,
   "type": "module",
   "engines": {
