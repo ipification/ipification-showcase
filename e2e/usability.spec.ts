@@ -54,7 +54,7 @@ test("QR waiting timeout permits a new state and ignores the old callback", asyn
   await page.getByRole("button", { name: "IP", exact: true }).click();
   const oldUrl = await page.getByTestId("qr-auth-link").getAttribute("href");
   await expect(
-    page.getByText("Waiting for verification…", { exact: true }),
+    page.getByText("Waiting for verification", { exact: true }),
   ).toBeVisible();
   await page.clock.fastForward(120_001);
   await expect(
