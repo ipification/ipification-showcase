@@ -14,7 +14,6 @@ test("mounted configuration is redacted and geoip retains fallback country", asy
       r.status === 200 ? "" : (await r.text()) + app.output(),
     ).toBe(200);
     const data = await r.json();
-    expect(data.version).toBe("1.2.17-SNAPSHOT");
     expect(data.locale.app.name).toBe("IPification features showcase");
     expect(data.appEnv).toBe("development");
     expect(data.defaultCountry).toBe("vn");

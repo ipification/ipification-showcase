@@ -1,4 +1,4 @@
-name: Showcase Express CI
+name: Showcase CI
 
 on:
   push:
@@ -17,14 +17,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      CI: 'true'
+      CI: "true"
     steps:
       - name: Check out code
         uses: actions/checkout@v6
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: '24.22.0'
+          node-version: "24.22.0"
           cache: npm
           cache-dependency-path: package-lock.json
       - name: Install dependencies
