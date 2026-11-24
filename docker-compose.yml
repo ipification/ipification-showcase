@@ -1,12 +1,29 @@
 services:
-  app:
-    restart: unless-stopped
+  showcase:
+    image: ipification_showcase:local
     build:
       context: .
-    image: "ipification_showcase"
+    restart: unless-stopped
+    init: true
     environment:
-      PORT: 3001
+      NODE_ENV: production
+      APP_ENV: ${SHOWCASE_APP_ENV:-stage}
+      LOG_LEVEL: ${LOG_LEVEL:-}
+      TRUST_PROXY_HOPS: ${SHOWCASE_TRUST_PROXY_HOPS:-0}
+      PORT: 3002
     ports:
-      - 3001:3001
+      - '3002:3002'
     volumes:
-      - ./config/default.json:/usr/app/config/default.json
+      - type: bind
+        source: ./config/default.json
+        target: /usr/app/config/default.json
+        read_only: true
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3002/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    stop_grace_period: 15s

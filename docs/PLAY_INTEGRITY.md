@@ -1,13 +1,38 @@
 # Play Integrity backend demo
 
+> [Documentation home](INDEX.md) · [Integration guide](integration/README.md) · [HTTP reference](integration/api.md)
+
 This demo verifies an Android Play Integrity token on the server at
-`POST /api/play-integrity/verify`. The endpoint is disabled unless
-`PLAY_INTEGRITY_ENABLED=true`.
+`POST /api/play-integrity/verify`. Verification is mandatory; missing configuration or Google verification failure does not produce a verified state.
 
 For the complete Android-to-IPification flow, use the three endpoints in this
 order: create a short-lived attempt, verify its fresh Play Integrity token,
 then exchange the IPification authorization code. The attempt and its
 server-side snapshot are the source of truth for the operation.
+
+## Flow overview
+
+```mermaid
+sequenceDiagram
+    participant A as Android app
+    participant S as Showcase backend
+    participant G as Google Play Integrity
+    participant I as IPification
+    A->>S: POST /api/play-integrity/attempt (phone_number, server_id)
+    S-->>A: attempt_id, request_hash, expires_at
+    A->>G: Request a fresh token using request_hash
+    G-->>A: Integrity token
+    A->>S: POST /api/play-integrity/verify
+    S->>G: Decode and verify token
+    S-->>A: Single-use signed state
+    A->>I: Start authentication with state
+    I-->>A: Authorization code and state
+    A->>S: POST /api/play-integrity/token-exchange
+    S->>I: Exchange code and get userinfo
+    S-->>A: decision and user_info
+```
+
+These are Showcase endpoints. The Android application is not included in this repository; the Kotlin snippets illustrate the integration boundaries and require an Android SDK setup of your own.
 
 ## Attempt, verification, and token exchange
 
@@ -25,7 +50,7 @@ Content-Type: application/json
 }
 ```
 
-The backend resolves the configured client and server, normalizes the phone
+The backend selects the client configured for `PLAY_INTEGRITY_USER_FLOW` and the requested server, normalizes the phone
 number, stores an immutable attempt snapshot, and computes the request hash.
 It returns only public values:
 
@@ -117,31 +142,22 @@ single-use; replay or expiry is rejected.
 
 ## Configuration
 
-Copy the safe examples from `.env.sample` into the deployment environment and
+Copy the safe examples from `.env.example` into `.env.local` or the deployment environment and
 set the package name to the Android application ID:
 
 ```dotenv
-PLAY_INTEGRITY_ENABLED=false
 PLAY_INTEGRITY_PACKAGE_NAME=com.example.demo
 GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/play-integrity-service-account.json
 PLAY_INTEGRITY_REQUIRE_LICENSED_APP=false
 PLAY_INTEGRITY_USER_FLOW=pvn_ip
+PLAY_INTEGRITY_STATE_SECRET=<long-random-secret>
+PLAY_INTEGRITY_STATE_ISSUER=showcase
+PLAY_INTEGRITY_STATE_AUDIENCE=showcase-app
 ```
 
-Configure the domains that must use Google verification in
-`config/default.json`:
+Verification does not depend on the request hostname. Missing Play Integrity settings make these endpoints unavailable without blocking unrelated flows.
 
-```json
-{
-  "play_integrity_verify_domains": ["showcase.example.com"]
-}
-```
-
-The request hostname must exactly match one configured domain. Protocol, port,
-path, and other subdomains are not included in the match. Requests from domains
-not in the list bypass the Google verdict call while still requiring and
-consuming a valid attempt and integrity token. An empty list bypasses Google
-verification for all domains.
+The authorization code and redirect URI must correspond to the configured client used for the attempt. The Play Integrity code exchange uses the generic mobile-style grant and does not have the browser flow’s backend-stored nonce or ID-token and subject checks. See [Mobile and S2S](integration/mobile-s2s.md).
 
 The Google Cloud project used by the backend must be linked to the matching
 application in Google Play Console. Enable the Play Integrity API in that
@@ -155,7 +171,7 @@ Credentials (ADC) may read the service-account JSON from
 `GOOGLE_APPLICATION_CREDENTIALS`. In a managed deployment, prefer workload
 identity or the platform's attached service account so no key file is needed.
 Never commit a service-account key, access token, Android integrity token, or
-decoded Google response. Do not put any of these values in `.env.sample`, test
+decoded Google response. Do not put any of these values in `.env.example`, test
 fixtures, client code, URLs, or logs.
 
 `PLAY_INTEGRITY_REQUIRE_LICENSED_APP=true` additionally requires the
@@ -172,6 +188,21 @@ request a token for each action. If the provider reports that it is invalid or
 expired, discard it, prepare a new provider, and retry the token request once
 after the warm-up succeeds. Follow the Android Play Integrity SDK result and
 error callbacks for renewal; do not retry indefinitely or reuse an old token.
+
+For example, prepare a provider ahead of the protected action:
+
+```kotlin
+val manager = IntegrityManagerFactory.createStandard(applicationContext)
+manager.prepareIntegrityToken(
+  PrepareIntegrityTokenRequest.builder()
+    .setCloudProjectNumber(CLOUD_PROJECT_NUMBER)
+    .build()
+).addOnSuccessListener { provider ->
+  integrityTokenProvider = provider
+}
+```
+
+See Google's [Standard API guide](https://developer.android.com/google/play/integrity/standard) for Android dependencies, imports, callbacks and error handling.
 
 ## Request hash protocol
 
@@ -195,7 +226,7 @@ locally and do not paste real tokens, authorization codes, signed states, or
 phone numbers into source control or documentation:
 
 ```bash
-curl --request POST "http://localhost:3000/api/play-integrity/verify" --header "Content-Type: application/json" --data '{"attempt_id":"<attempt-id>","integrity_token":"<fresh-token-from-android>"}'
+curl --request POST "http://localhost:3002/api/play-integrity/verify" --header "Content-Type: application/json" --data '{"attempt_id":"<attempt-id>","integrity_token":"<fresh-token-from-android>"}'
 ```
 
 The successful response contains only:
@@ -211,7 +242,7 @@ A successful response is HTTP 201. A policy denial is HTTP 403 and includes
 safe reason codes such as `REQUEST_HASH_MISMATCH`, `APP_NOT_RECOGNIZED`,
 `DEVICE_INTEGRITY_NOT_MET`, or `APP_NOT_LICENSED`. Invalid input returns 400;
 an expired or already used attempt returns 409; Google credential, network, or
-timeout unavailability returns 503. The API does not return the submitted
+timeout unavailability returns 503. An IPification code exchange failure returns 401. The API does not return the submitted
 token, bearer credential, decoded `tokenPayloadExternal`, or raw Google
 response.
 
@@ -222,14 +253,16 @@ credentials, client secrets, or decoded verdict payloads.
 
 ## TTL and storage boundary
 
-Attempts, approved transactions, and signed states expire after 120 seconds.
-The built-in `dataStore` is an in-memory, single-process implementation for
-this demo: it is not shared between workers or instances and all state is lost
-when the process restarts. Production deployments must replace it with Redis
-or a database supporting atomic claim/consume operations, and must bind the
-attempt and signed state to an authenticated user session or a short-lived
-verification session. An unguessable `attempt_id` alone is not an authenticated
-credential.
+Attempts expire after 120 seconds; an approved transaction shares the original
+attempt deadline. The signed state also has a 120-second lifetime, but cannot
+extend that transaction deadline.
+
+The built-in storage is in-memory and process-local; it is not shared across
+instances and a restart clears all state. Deployments requiring shared or durable
+state need storage supporting atomic claim and consume operations. Production
+integrations must also bind the attempt and signed state to an authenticated
+user session or a short-lived verification session. An unguessable `attempt_id`
+alone is not an authenticated credential.
 
 ## Android verification checklist
 
@@ -259,3 +292,9 @@ application.
       `REQUEST_HASH_MISMATCH`. Do not submit that token again.
 - [ ] Confirm logs contain only request ID, decision, reason codes, and
       duration, with no token, credential, request body, or decoded response.
+
+## Source and tests
+
+- [Routes](../src/modules/play-integrity/routes.ts), [handler](../src/modules/play-integrity/handlers.ts), and [service](../src/modules/play-integrity/service.ts).
+- [Attempt lifecycle and hash](../src/modules/play-integrity/attempts.ts) and [Google verification](../src/modules/play-integrity/verifier.ts).
+- [API contracts](../tests/contracts/integrity.test.ts) and [service tests](../tests/services/integrity.test.ts). Tests use simulated provider responses; a real Android/Google Play verification requires the manual setup above.

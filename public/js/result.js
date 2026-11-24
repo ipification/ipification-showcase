@@ -1,0 +1,15 @@
+import { notifyError, notifySuccess } from "./notification.js";
+const copy = document.querySelector("#copy-json");
+copy?.addEventListener("click", async () => {
+  const status = document.querySelector("#copy-status");
+  try {
+    await navigator.clipboard.writeText(
+      document.querySelector(".showcase-result-json").textContent,
+    );
+    status.textContent = "JSON copied";
+    notifySuccess("JSON copied");
+  } catch {
+    status.textContent = "Unable to copy JSON. Please copy it manually.";
+    notifyError(status.textContent);
+  }
+});

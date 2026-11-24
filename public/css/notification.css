@@ -1,0 +1,16 @@
+.showcase-notification {
+  position: fixed; inset: 24px 16px auto auto; z-index: 10000; margin: 0;
+  display: flex; align-items: center; gap: 16px; width: min(440px, calc(100vw - 32px));
+  padding: 18px 16px; border: 1px solid #e4e7ec; border-radius: 12px;
+  background: #fff; box-shadow: 0 12px 32px rgb(16 24 40 / 18%);
+  color: #344054; font: 15px/1.45 Arial, sans-serif;
+}
+.showcase-notification-icon { display: grid; flex: 0 0 40px; height: 40px; place-items: center; border-radius: 50%; background: #fef3f2; color: #b42318; font-size: 21px; font-weight: 700; }
+.showcase-notification--success .showcase-notification-icon { background: #eafaf2; color: #12805c; }
+.showcase-notification-content { flex: 1; min-width: 0; }
+.showcase-notification strong { display: block; color: #b42318; font-size: 15px; }
+.showcase-notification--success strong { color: #12805c; }
+.showcase-notification p { margin: 4px 0 0; overflow-wrap: anywhere; }
+.showcase-notification button { flex: 0 0 32px; width: 32px; height: 32px; border: 0; border-radius: 6px; background: transparent; color: #667085; font-size: 24px; line-height: 1; cursor: pointer; }
+.showcase-notification button:focus-visible { outline: 2px solid #2646ff; outline-offset: 2px; }
+@media (max-width: 480px) { .showcase-notification { inset: 16px 16px auto; } }
