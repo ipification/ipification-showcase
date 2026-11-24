@@ -30,7 +30,6 @@ test("Integrity fails closed when Google credentials are unavailable", async () 
   const provider = await startProvider();
   const config = configFixture({
     auth_servers: [{ id: "stage", url: provider.url }],
-    play_integrity_verify_domains: [],
   });
   const port = await freePort();
   const app = await startApp({

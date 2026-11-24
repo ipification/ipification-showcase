@@ -3,6 +3,7 @@
 import { resolveContext } from "@/shared/server/http/context";
 import { toPublicShowcaseConfig } from "@/config/public";
 import { json, unavailable } from "@/shared/server/http/response";
+import { addApiLogContext } from "@/shared/server/common/logger";
 /**
  * `GET /api/config` returns configuration that clients can read from the Showcase.
  *
@@ -15,8 +16,19 @@ function getPublicConfig(request: Request) {
   try {
     // Return only the public projection; server secrets never leave this endpoint.
     const context = resolveContext(request);
-    return json(toPublicShowcaseConfig(context.config, context.origin));
+    const responseConfig = toPublicShowcaseConfig(
+      context.config,
+      context.origin,
+    );
+    addApiLogContext(request, {
+      result: "public_config_returned",
+      authServerCount: context.config.auth_servers.length,
+      clientFlowCount: context.config.clients.length,
+      origin: context.origin,
+    });
+    return json(responseConfig);
   } catch {
+    addApiLogContext(request, { result: "configuration_unavailable" });
     return unavailable();
   }
 }

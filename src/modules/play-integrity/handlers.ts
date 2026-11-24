@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { resolveContext } from "@/shared/server/http/context";
 import { readBody } from "@/shared/server/http/body";
 import { json } from "@/shared/server/http/response";
-import { logRequest } from "@/shared/server/common/logger";
+import { addApiLogContext } from "@/shared/server/common/logger";
 import { runtimeIntegrityService } from "./runtime";
 import type { IntegrityEndpoint } from "./input";
 import type { IntegrityCategory } from "./service";
@@ -35,15 +35,15 @@ export async function handleIntegrity(
   request: Request,
   endpoint: IntegrityEndpoint,
 ) {
-  // Keep one ID and start time for both the response envelope and its audit log.
+  // Keep a response reference ID for the existing error response contract.
   const requestId = randomUUID();
-  const startedAt = Date.now();
-  /** @param status - HTTP status to send. @param body - Response fields. @returns Logged JSON response with request duration. */
+  let requestContext: Record<string, unknown> = {};
+  /** @param status - HTTP status to send. @param body - Response fields. @returns The API response with its searchable request context recorded. */
   const logAndRespond = (status: number, body: Record<string, unknown>) => {
-    logRequest({
-      requestId,
+    addApiLogContext(request, {
       endpoint,
       status,
+      ...requestContext,
       decision:
         typeof body.decision === "string"
           ? body.decision
@@ -51,7 +51,6 @@ export async function handleIntegrity(
             ? "allow"
             : "deny",
       reasonCodes: Array.isArray(body.reason_codes) ? body.reason_codes : [],
-      duration: Date.now() - startedAt,
     });
     return json(body, status);
   };
@@ -70,6 +69,14 @@ export async function handleIntegrity(
   try {
     // Reject oversized or malformed bodies before creating the runtime services.
     requestBody = await readBody(request, 16384);
+    requestContext = {
+      serverId: requestBody.server_id,
+      phone: requestBody.phone_number,
+      attemptId: requestBody.attempt_id,
+      token: requestBody.integrity_token,
+      code: requestBody.code,
+      state: requestBody.state,
+    };
   } catch {
     return rejectWithReason(400, "INVALID_REQUEST");
   }

@@ -5,7 +5,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
-test("environment files preserve process precedence, local overrides and variable expansion", () => {
+test("environment files preserve process precedence and local overrides without variable expansion", () => {
   const dir = mkdtempSync(path.join(tmpdir(), "showcase-env-"));
   try {
     writeFileSync(
@@ -17,7 +17,7 @@ test("environment files preserve process precedence, local overrides and variabl
       "SHOWCASE_TEST_ORDER=local\nSHOWCASE_TEST_EXPANDED=$SHOWCASE_TEST_BASE\n",
     );
     const module = pathToFileURL(path.resolve("runtime/config.mjs")).href;
-    const code = `import { initializeConfigEnvironment } from ${JSON.stringify(module)}; initializeConfigEnvironment({appRoot:${JSON.stringify(dir)},dev:true}); console.log(JSON.stringify({order:process.env.SHOWCASE_TEST_ORDER, expanded:process.env.SHOWCASE_TEST_EXPANDED, existing:process.env.SHOWCASE_TEST_EXISTING}));`;
+    const code = `import { initializeConfigEnvironment } from ${JSON.stringify(module)}; initializeConfigEnvironment({appRoot:${JSON.stringify(dir)},dev:true}); console.log(JSON.stringify({order:process.env.SHOWCASE_TEST_ORDER, literal:process.env.SHOWCASE_TEST_EXPANDED, existing:process.env.SHOWCASE_TEST_EXISTING}));`;
     const child = spawnSync(
       process.execPath,
       ["--input-type=module", "-e", code],
@@ -29,7 +29,7 @@ test("environment files preserve process precedence, local overrides and variabl
     expect(child.status, child.stderr).toBe(0);
     expect(JSON.parse(child.stdout)).toEqual({
       order: "local",
-      expanded: "from-base",
+      literal: "$SHOWCASE_TEST_BASE",
       existing: "process",
     });
   } finally {

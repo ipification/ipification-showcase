@@ -13,6 +13,7 @@ import {
   checkTs43Limit,
   checkAuthLimit,
 } from "@/shared/server/storage/rate-limit";
+import { addApiLogContext } from "@/shared/server/common/logger";
 
 /**
  * `POST /ts43/auth` prepares a SIM credential request.
@@ -30,11 +31,23 @@ export async function createSimCredentialRequest(request: Request) {
   try {
     // Parse the SIM request before applying the TS43-specific limit.
     ({ context, input } = await readCibaRequest(request));
+    addApiLogContext(request, {
+      clientId: input.client_id,
+      serverId: input.server_id,
+      scope: input.scope,
+      phone: input.login_hint,
+      carrier: input.carrier_hint,
+      operation: input.operation,
+    });
     // Limit before resolving the client/server, as required by this endpoint.
     const limit = await checkTs43Limit(context, input);
     headers = limit.headers;
-    if (!limit.allowed) return json({ error: "RATE_LIMITED" }, 429, headers);
+    if (!limit.allowed) {
+      addApiLogContext(request, { result: "rate_limited" });
+      return json({ error: "RATE_LIMITED" }, 429, headers);
+    }
   } catch (error) {
+    addApiLogContext(request, { result: "invalid_request" });
     return requestFailure(error);
   }
   try {
@@ -43,8 +56,16 @@ export async function createSimCredentialRequest(request: Request) {
       context,
       input,
     );
+    addApiLogContext(request, {
+      result: outcome.kind,
+      authServerId: outcome.server.id,
+      ...(outcome.kind === "failure"
+        ? { providerStatus: outcome.failure.status }
+        : { authRequestId: outcome.authReqId }),
+    });
     return startResponse(outcome, headers);
   } catch (error) {
+    addApiLogContext(request, { result: "service_unavailable" });
     return operationFailure(error, "auth");
   }
 }
@@ -62,10 +83,19 @@ export async function exchangeSimCredential(request: Request) {
   try {
     // Validate the returned credential request fields and limit token submissions.
     ({ context, input } = await readCibaRequest(request));
+    addApiLogContext(request, {
+      clientId: input.client_id,
+      serverId: input.server_id,
+      authRequestId: input.auth_req_id,
+      operation: input.operation,
+    });
     const limit = await checkAuthLimit("sim-token", context, input);
-    if (!limit.allowed)
+    if (!limit.allowed) {
+      addApiLogContext(request, { result: "rate_limited" });
       return json({ error: "RATE_LIMITED" }, 429, limit.headers);
+    }
   } catch (error) {
+    addApiLogContext(request, { result: "invalid_request" });
     return requestFailure(error);
   }
   try {
@@ -75,8 +105,16 @@ export async function exchangeSimCredential(request: Request) {
       input,
       sessionId(request),
     );
+    addApiLogContext(request, {
+      result: outcome.kind,
+      authServerId: outcome.server.id,
+      ...(outcome.kind === "failure"
+        ? { providerStatus: outcome.failure.status }
+        : { claimCount: Object.keys(outcome.data).length }),
+    });
     return tokenResponse(outcome, context.origin);
   } catch (error) {
+    addApiLogContext(request, { result: "service_unavailable" });
     return operationFailure(error, "token");
   }
 }

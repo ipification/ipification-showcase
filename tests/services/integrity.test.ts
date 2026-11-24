@@ -39,10 +39,6 @@ function setup() {
   const exchange = vi.fn(async () => ({ userInfo: { sub: "user" } }));
   const context = {
     ...serviceContext,
-    config: {
-      ...serviceContext.config,
-      play_integrity_verify_domains: [" VERIFY.EXAMPLE "],
-    },
     hostname: "verify.example",
   };
   return {

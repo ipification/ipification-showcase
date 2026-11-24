@@ -14,6 +14,7 @@ import {
   type TokenOutcome,
 } from "./service";
 import { decodeCiba } from "./input";
+import { addApiLogContext } from "@/shared/server/common/logger";
 
 /**
  * Reads request-specific context and the common SMS/SIM input fields.
@@ -118,9 +119,14 @@ export function operationFailure(error: unknown, operation: "auth" | "token") {
  */
 export async function diagnostics(request: Request) {
   try {
-    await readBody(request);
+    const payload = await readBody(request);
+    addApiLogContext(request, {
+      result: "diagnostic_received",
+      payloadFields: Object.keys(payload),
+    });
     return text("OK");
   } catch (error) {
+    addApiLogContext(request, { result: "invalid_diagnostic_request" });
     return requestFailure(error);
   }
 }

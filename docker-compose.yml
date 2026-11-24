@@ -8,8 +8,7 @@ services:
     environment:
       NODE_ENV: production
       APP_ENV: ${SHOWCASE_APP_ENV:-stage}
-      NODE_CONFIG_ENV: ${SHOWCASE_APP_ENV:-stage}
-      NODE_CONFIG_DIR: /run/showcase-config
+      LOG_LEVEL: ${LOG_LEVEL:-}
       TRUST_PROXY_HOPS: ${SHOWCASE_TRUST_PROXY_HOPS:-0}
       PORT: 3002
     ports:
@@ -17,7 +16,7 @@ services:
     volumes:
       - type: bind
         source: ./config/default.json
-        target: /run/showcase-config/default.json
+        target: /usr/app/config/default.json
         read_only: true
         bind:
           create_host_path: false

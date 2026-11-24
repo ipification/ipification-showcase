@@ -15,6 +15,7 @@ import { decodeStart, decodeCallback, decodePrepare } from "./input";
 import { callbackFailure } from "./failure";
 import { AUTH_ATTEMPT_MS, QR_SCAN_MS } from "./attempts";
 import { authBinding, newBinding, setAuthBinding } from "./state-cookies";
+import { addApiLogContext } from "@/shared/server/common/logger";
 
 /**
  * `POST /auth/prepare` creates a state for browser authorization.
@@ -32,19 +33,33 @@ export async function prepareWebAuthentication(request: Request) {
       (origin && origin !== context.origin) ||
       request.headers.get("sec-fetch-site") === "cross-site" ||
       request.headers.get("content-type")?.split(";")[0] !== "application/json"
-    )
+    ) {
+      addApiLogContext(request, { result: "invalid_request" });
       return json({ error: "INVALID_REQUEST" }, 400);
+    }
     // Issue the owner binding before creating the attempt; the same cookie is needed
     // when this browser later checks status and claims the result.
     // The initiating browser keeps this owner cookie; the phone scanning a QR gets
     // a separate callback cookie when it opens /auth/start.
     const owner = newBinding();
     // Decode only the supported request fields and keep the HTTP body size bounded.
+    const input = decodePrepare(await readBody(request, 16384));
+    addApiLogContext(request, {
+      flow: input.user_flow,
+      serverId: input.server_id,
+      qr: input.qr,
+      phone: input.phone,
+    });
     const prepared = await authService.prepareWebAuthentication(
       context,
-      decodePrepare(await readBody(request, 16384)),
+      input,
       owner,
     );
+    addApiLogContext(request, {
+      result: "attempt_prepared",
+      state: prepared.state,
+      expiresAt: prepared.expiresAt,
+    });
     return setAuthBinding(
       json(prepared, 201),
       "owner",
@@ -57,6 +72,15 @@ export async function prepareWebAuthentication(request: Request) {
         : AUTH_ATTEMPT_MS,
     );
   } catch (error) {
+    addApiLogContext(request, {
+      result: "failed",
+      reason:
+        error instanceof AuthAttemptError || error instanceof ApplicationError
+          ? error instanceof AuthAttemptError
+            ? error.reason
+            : error.code
+          : "SERVICE_UNAVAILABLE",
+    });
     if (error instanceof AuthAttemptError)
       return json({ error: error.reason }, 400);
     if (error instanceof ApplicationError)
@@ -76,6 +100,12 @@ export async function startWebAuthentication(request: Request) {
   try {
     const context = resolveContext(request);
     const input = decodeStart(query(request));
+    addApiLogContext(request, {
+      flow: input.user_flow,
+      serverId: input.server_id,
+      state: input.state,
+      phone: input.phone,
+    });
 
     // The owner started the flow. For QR, the phone opening the link is a different browser.
     const ownerCookie = authBinding(request, "owner", input.state);
@@ -83,6 +113,10 @@ export async function startWebAuthentication(request: Request) {
     const authorization = await authService.startPreparedAttempt(context, input, {
       owner: ownerCookie,
       callback: callbackToken,
+    });
+    addApiLogContext(request, {
+      result: "provider_redirect",
+      providerHost: new URL(authorization.url).host,
     });
 
     // Bind the browser that follows this redirect to the later provider callback.
@@ -95,6 +129,15 @@ export async function startWebAuthentication(request: Request) {
       context.origin,
     );
   } catch (error) {
+    addApiLogContext(request, {
+      result: "failed",
+      reason:
+        error instanceof AuthAttemptError || error instanceof ApplicationError
+          ? error instanceof AuthAttemptError
+            ? error.reason
+            : error.code
+          : "SERVICE_UNAVAILABLE",
+    });
     if (error instanceof AuthAttemptError)
       return callbackFailure(request, error);
     if (error instanceof ApplicationError) {
@@ -121,10 +164,13 @@ export async function handleAuthorizationCallback(
   routeParams: { userFlow: string; serverId: string },
 ) {
   const { userFlow, serverId } = routeParams;
+  // Record route identifiers before config resolution so failed callbacks remain searchable.
+  addApiLogContext(request, { flow: userFlow, serverId });
   let context;
   try {
     context = resolveContext(request);
   } catch {
+    addApiLogContext(request, { result: "configuration_unavailable" });
     return unavailable();
   }
   const input = {
@@ -135,6 +181,14 @@ export async function handleAuthorizationCallback(
     backchannel: request.headers.get("ip-backchannel-im-auth") === "true",
     callbackBinding: "",
   };
+  addApiLogContext(request, {
+    flow: userFlow,
+    serverId,
+    state: input.state,
+    code: input.code,
+    providerError: input.error,
+    backchannel: input.backchannel,
+  });
   input.callbackBinding = authBinding(request, "callback", input.state);
   // Clear the one-use callback cookie after handling the provider's browser redirect.
   const finish = (response: Response) =>
@@ -154,6 +208,7 @@ export async function handleAuthorizationCallback(
       context,
       input,
     );
+    addApiLogContext(request, { result: outcome.kind });
     switch (outcome.kind) {
       case "pending":
         return legacyRedirect(`/auth/pending?state=${outcome.state}`);
@@ -180,6 +235,15 @@ export async function handleAuthorizationCallback(
         return finish(legacyRedirect(outcome.url));
     }
   } catch (error) {
+    addApiLogContext(request, {
+      result: "failed",
+      reason:
+        error instanceof AuthAttemptError || error instanceof ApplicationError
+          ? error instanceof AuthAttemptError
+            ? error.reason
+            : error.code
+          : "SERVICE_UNAVAILABLE",
+    });
     if (error instanceof AuthAttemptError)
       return finish(callbackFailure(request, error));
     if (error instanceof ApplicationError)
@@ -213,6 +277,10 @@ export async function completeWebAuthentication(request: Request) {
       sessionId(request),
       authBinding(request, "owner", state),
     );
+    addApiLogContext(request, {
+      result: typeof outcome === "string" ? "completed" : "not_completed",
+      state,
+    });
     // Completion is claimed by the owner, then the result becomes a display session.
     const response = setSessionCookie(
       legacyRedirect(
@@ -230,6 +298,11 @@ export async function completeWebAuthentication(request: Request) {
       true,
     );
   } catch (error) {
+    addApiLogContext(request, {
+      result: "failed",
+      reason:
+        error instanceof AuthAttemptError ? error.reason : "SERVICE_UNAVAILABLE",
+    });
     return error instanceof AuthAttemptError
       ? callbackFailure(request, error)
       : unavailable();
@@ -248,15 +321,24 @@ export async function getAuthenticationStatus(request: Request) {
   try {
     const context = resolveContext(request),
       state = query(request).state;
-    return json(
-      await authService.getAuthenticationStatus(
+    const status = await authService.getAuthenticationStatus(
         context,
         state,
         authBinding(request, "owner", state),
         sessionId(request),
-      ),
-    );
+      );
+    addApiLogContext(request, {
+      state,
+      result: status.status,
+      started: status.started,
+    });
+    return json(status);
   } catch (error) {
+    addApiLogContext(request, {
+      result: "failed",
+      reason:
+        error instanceof AuthAttemptError ? error.reason : "SERVICE_UNAVAILABLE",
+    });
     return error instanceof AuthAttemptError
       ? json({ error: error.reason }, 400)
       : unavailable();

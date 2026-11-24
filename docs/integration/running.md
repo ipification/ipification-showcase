@@ -15,7 +15,15 @@ npm run config:check
 APP_ENV=stage npm run dev
 ```
 
-Do not commit real credentials. Alternatively set `NODE_CONFIG_DIR` to an absolute private configuration directory. `APP_ENV=stage` selects stage demo behavior and, unless explicitly overridden, also selects node-config’s stage overlay via `NODE_CONFIG_ENV`. The sample environment uses port 3002.
+Do not commit real credentials. Alternatively set `NODE_CONFIG_DIR` to an absolute private configuration directory. `APP_ENV=stage` selects stage demo behavior. The sample environment uses port 3002.
+
+## Logging
+
+Application logs are newline-delimited JSON. By default, `APP_ENV=stage` and `APP_ENV=development` use the `debug` level; `APP_ENV=production` and unknown environments use `info`. Set `LOG_LEVEL` to override the default, for example `LOG_LEVEL=info npm run dev` or `LOG_LEVEL=debug docker compose up --build`.
+
+Each API request writes one searchable completion log with `requestId`, method, path, matched endpoint, HTTP status, duration and a `context` object. Handlers add useful business details such as selected server/client, operation result, provider status, and reason codes. The same `requestId` is returned in the `X-Request-Id` response header and is passed to adapted handlers as `x-request-id`.
+
+At `debug` level, a separate log includes route, query parameters and bounded JSON/form bodies for POST requests. Bodies are sanitized using the same field rules as other request parameters; Play Integrity request bodies are never captured. In `APP_ENV=stage`, `code`, `state`, phone, mobile, MSISDN and OTP fields can be visible to help debug authentication; those fields are redacted in other environments. Authorization, cookie, password, secret, token, credential, nonce, PIN and session fields are always redacted. Provider claims are not logged. Handlers should add only specific diagnostic fields with `addApiLogContext`; do not log a full provider response. Asset requests are excluded from request logs.
 
 Startup lists local and network URLs. For phone QR testing, open the desktop through the network URL that the phone can reach, and use that same origin for the flow. Do not use `localhost` in the QR: on the phone it refers to the phone. Register the exact callback URL with your provider. Restart the dev server after changing host network interfaces to refresh the printed network addresses.
 

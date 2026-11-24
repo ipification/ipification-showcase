@@ -6,6 +6,7 @@ import { json, requestFailure } from "@/shared/server/http/response";
 import { validState } from "@/shared/server/storage/auth-state";
 import { resolveContext } from "@/shared/server/http/context";
 import { checkAuthLimit } from "@/shared/server/storage/rate-limit";
+import { addApiLogContext } from "@/shared/server/common/logger";
 /**
  * `POST /auth/s2s/signin` reads userinfo stored by a successful browser callback.
  *
@@ -36,16 +37,23 @@ import { checkAuthLimit } from "@/shared/server/storage/rate-limit";
 async function readS2sResult(request: Request) {
   try {
     const body = await readBody(request);
+    addApiLogContext(request, { state: body.state });
     // Limit before reading a one-time result so a throttled call does not consume it.
     const limit = await checkAuthLimit("s2s", resolveContext(request), body);
-    if (!limit.allowed)
+    if (!limit.allowed) {
+      addApiLogContext(request, { result: "rate_limited" });
       return json({ error: "RATE_LIMITED" }, 429, limit.headers);
+    }
     // Consume claims saved by the browser callback; this endpoint never exchanges a code.
     const user = validState(body.state)
       ? await authResultStore.consumeUserInfo(body.state)
       : undefined;
+    addApiLogContext(request, {
+      result: user ? "result_consumed" : "result_not_found",
+    });
     return user ? json(user) : new Response(null, { status: 401 });
   } catch (error) {
+    addApiLogContext(request, { result: "request_failed" });
     return requestFailure(error);
   }
 }

@@ -7,6 +7,7 @@ import {
   ApplicationError,
   providerFailure,
 } from "@/shared/server/common/errors";
+import { addApiLogContext } from "@/shared/server/common/logger";
 import { decodeMobile, exchangeMobileAuthorizationCode } from "./service";
 import { checkAuthLimit } from "@/shared/server/storage/rate-limit";
 /**
@@ -48,11 +49,20 @@ export async function exchangeMobileCode(request: Request) {
     // Resolve the request context and keep only fields used by the mobile exchange.
     context = resolveContext(request);
     input = decodeMobile(await readBody(request));
+    addApiLogContext(request, {
+      clientId: input.client_id,
+      serverId: input.server_id,
+      code: input.code,
+      redirectUriProvided: Boolean(input.redirect_uri),
+    });
     // Apply the endpoint's rate limit before making a provider request.
     const limit = await checkAuthLimit("mobile", context, input);
-    if (!limit.allowed)
+    if (!limit.allowed) {
+      addApiLogContext(request, { result: "rate_limited" });
       return json({ error: "RATE_LIMITED" }, 429, limit.headers);
+    }
   } catch (error) {
+    addApiLogContext(request, { result: "invalid_request" });
     return requestFailure(error);
   }
   try {
@@ -61,9 +71,15 @@ export async function exchangeMobileCode(request: Request) {
       context,
       input,
     );
+    addApiLogContext(request, {
+      result: "claims_returned",
+      authServerId: server.id,
+      claimCount: Object.keys(userInfo).length,
+    });
     return json({ auth_server: server, ...userInfo });
   } catch (error) {
-    if (error instanceof ApplicationError)
+    if (error instanceof ApplicationError) {
+      addApiLogContext(request, { result: "rejected", reason: error.code });
       return error.code === "CLIENT_NOT_FOUND"
         ? json({ error: "Client not found" }, 401)
         : json(
@@ -74,6 +90,11 @@ export async function exchangeMobileCode(request: Request) {
             },
             400,
           );
+    }
+    addApiLogContext(request, {
+      result: "provider_failure",
+      providerStatus: providerFailure(error).status,
+    });
     return json({ error: providerFailure(error).message }, 401);
   }
 }

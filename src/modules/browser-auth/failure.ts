@@ -10,6 +10,7 @@ import {
   type AuthFailureReason,
 } from "@/shared/auth-failures";
 import { json, legacyRedirect } from "@/shared/server/http/response";
+import { logger } from "@/shared/server/common/logger";
 /**
  * Maps an internal or provider error to safe fields for logs and the error page.
  *
@@ -83,8 +84,9 @@ export function callbackFailure(request: Request, error: unknown) {
   const failure = describeAuthFailure(error);
   const reference = randomUUID();
   // Do not log Axios errors/config/data: these contain codes, secrets and tokens.
-  console.error(
-    JSON.stringify({ event: "auth_callback_failed", reference, ...failure }),
+  logger.error(
+    { event: "auth_callback_failed", reference, ...failure },
+    "Authentication callback failed",
   );
   if (request.headers.get("ip-backchannel-im-auth") === "true")
     return json({ error: failure.reason, reference }, 400);

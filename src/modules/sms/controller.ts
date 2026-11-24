@@ -4,6 +4,7 @@ import { sessionId } from "@/shared/server/session/cookies";
 import { json, requestFailure } from "@/shared/server/http/response";
 import { checkAuthLimit } from "@/shared/server/storage/rate-limit";
 import { cibaService } from "@/shared/server/ciba/service";
+import { addApiLogContext } from "@/shared/server/common/logger";
 import {
   readCibaRequest,
   startResponse,
@@ -25,17 +26,34 @@ export async function sendSmsCode(request: Request) {
   try {
     // Parse common CIBA fields and reject requests that exceed this endpoint's rate limit.
     ({ context, input } = await readCibaRequest(request));
+    addApiLogContext(request, {
+      clientId: input.client_id,
+      serverId: input.server_id,
+      scope: input.scope,
+      phone: input.login_hint,
+    });
     const limit = await checkAuthLimit("sms-auth", context, input);
-    if (!limit.allowed)
+    if (!limit.allowed) {
+      addApiLogContext(request, { result: "rate_limited" });
       return json({ error: "RATE_LIMITED" }, 429, limit.headers);
+    }
   } catch (error) {
+    addApiLogContext(request, { result: "invalid_request" });
     return requestFailure(error);
   }
   try {
     // Ask the shared CIBA service to create the provider SMS challenge.
     const outcome = await cibaService.sendSmsCode(context, input);
+    addApiLogContext(request, {
+      result: outcome.kind,
+      authServerId: outcome.server.id,
+      ...(outcome.kind === "failure"
+        ? { providerStatus: outcome.failure.status }
+        : { authRequestId: outcome.authReqId }),
+    });
     return startResponse(outcome);
   } catch (error) {
+    addApiLogContext(request, { result: "service_unavailable" });
     return operationFailure(error, "auth");
   }
 }
@@ -54,10 +72,19 @@ export async function verifySmsCode(request: Request) {
   try {
     // Read the same challenge fields so the provider request stays tied to /sms/auth.
     ({ context, input } = await readCibaRequest(request));
+    addApiLogContext(request, {
+      clientId: input.client_id,
+      serverId: input.server_id,
+      authRequestId: input.auth_req_id,
+      code: input.code,
+    });
     const limit = await checkAuthLimit("sms-token", context, input);
-    if (!limit.allowed)
+    if (!limit.allowed) {
+      addApiLogContext(request, { result: "rate_limited" });
       return json({ error: "RATE_LIMITED" }, 429, limit.headers);
+    }
   } catch (error) {
+    addApiLogContext(request, { result: "invalid_request" });
     return requestFailure(error);
   }
   try {
@@ -67,8 +94,16 @@ export async function verifySmsCode(request: Request) {
       input,
       sessionId(request),
     );
+    addApiLogContext(request, {
+      result: outcome.kind,
+      authServerId: outcome.server.id,
+      ...(outcome.kind === "failure"
+        ? { providerStatus: outcome.failure.status }
+        : { claimCount: Object.keys(outcome.data).length }),
+    });
     return tokenResponse(outcome, context.origin);
   } catch (error) {
+    addApiLogContext(request, { result: "service_unavailable" });
     return operationFailure(error, "token");
   }
 }
