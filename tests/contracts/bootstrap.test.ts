@@ -5,19 +5,32 @@ test("Express serves pages, legacy root redirect and not-found", async () => {
   const app = await startApp();
   try {
     const port = new URL(app.url).port;
-    expect(app.output()).toContain(
-      `Local: http://localhost:${port}/auth/login`,
+    const startupLogs = app
+      .output()
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line) as { msg?: string; url?: string });
+    expect(startupLogs).toContainEqual(
+      expect.objectContaining({
+        url: `http://localhost:${port}/auth/login`,
+        msg: "Open Showcase locally",
+      }),
     );
-    expect(app.output()).toContain(
-      "For QR authentication from your phone, open a Network URL on your computer",
+    expect(startupLogs).toContainEqual(
+      expect.objectContaining({
+        msg: "For phone QR authentication, use a Network URL reachable from the phone; localhost points to the phone itself.",
+      }),
     );
     const addresses = Object.values(networkInterfaces())
       .flatMap((values) => values || [])
       .filter((entry) => entry.family === "IPv4" && !entry.internal)
       .map((entry) => entry.address);
     for (const address of new Set(addresses))
-      expect(app.output()).toContain(
-        `Network: http://${address}:${port}/auth/login`,
+      expect(startupLogs).toContainEqual(
+        expect.objectContaining({
+          url: `http://${address}:${port}/auth/login`,
+          msg: "Open Showcase from another device on the same network",
+        }),
       );
     const root = await fetch(app.url, { redirect: "manual" });
     expect(root.status).toBe(302);
